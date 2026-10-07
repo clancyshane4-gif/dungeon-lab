@@ -53,7 +53,6 @@ function tradeDrawer(t, ctx) {
       body.replaceChildren(h('div', { class: 'dl' }, rows.map(([k, v]) => [h('span', { class: 'label' }, k), h('span', null, v)])), img,
         h('div', { class: 'row', style: { marginTop: '24px' } },
           btn('Edit', edit, 'ghost'),
-          btn('Turn into lesson', () => { A.nav.prefill = { lesson: { date: t.date, trade_id: t.id, title: `${t.direction} ${t.instrument}, ${t.model || 'trade'}`, body: t.notes || '' } }; close(); ctx.go('lessons'); }, 'ghost'),
           confirmBtn('Delete', async () => { await db.remove('trades', t.id); close(); toast('Trade deleted'); ctx.refresh(); }, 'ghost')));
     };
     const edit = () => {
@@ -108,7 +107,7 @@ function journal(el, ctx) {
   const f = form(tradeDefs(acts), defaults, pointSync);
   const file = h('input', { type: 'file', accept: 'image/*' });
   el.append(card('Log a trade',
-    acts.length ? null : h('p', { class: 'ital' }, 'Add an account in the Prop Firm Tracker first, then log trades against it.'),
+    acts.length ? null : h('p', { class: 'ital' }, 'Set up your account in Settings first, then log trades against it.'),
     f.el,
     h('label', { class: 'fld', style: { marginTop: '14px' } }, h('span', { class: 'label' }, 'Chart screenshot (optional)'), file),
     h('div', { style: { marginTop: '18px' } }, btn('Save trade', guard(async () => {
@@ -242,7 +241,7 @@ function monthly(el, ctx) {
 
 export default [
   { slug: 'today', title: 'Today', desc: 'Your daily cockpit. Session, accounts, news and prep in one glance before you click anything.', render: today },
-  { slug: 'journal', title: 'Journal', desc: "Every trade logged here feeds your calendar, lessons, and discipline score. Be honest, the data only helps if it's real.", render: journal },
+  { slug: 'journal', title: 'Journal', desc: "Every trade logged here feeds your Dashboard, streaks and insights. Be honest, the data only helps if it's real.", render: journal },
   { slug: 'calendar', title: 'Calendar', desc: 'Your month, day by day. Feeds the Monthly Report and shows which days are doing the damage.', render: calendar },
   { slug: 'scorecard', title: 'Daily Scorecard', desc: 'Grade the trader, not the trade. Fill this in at the end of every session.', render: scorecard },
   { slug: 'lessons', title: 'Lessons', desc: 'What the market taught you, in your own words. Feeds your Weekly Review and Monthly Report.', render: lessons },
