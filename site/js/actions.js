@@ -15,7 +15,7 @@ export function resolveAccount(ref) {
   const act = activeAccounts();
   if (!ref) {
     if (act.length === 1) return act[0];
-    throw new Error(act.length ? `Which account? Options: ${act.map((a) => a.name).join(', ')}.` : 'There are no active accounts yet. Add one in the Prop Firm Tracker first.');
+    throw new Error(act.length ? `Which account? Options: ${act.map((a) => a.name).join(', ')}.` : 'There are no active accounts yet. Set one up in Settings first.');
   }
   const q = String(ref).trim().toLowerCase();
   const hit = S.accounts.find((a) => a.id === ref) || S.accounts.find((a) => a.name.toLowerCase() === q);
