@@ -1,25 +1,19 @@
 import { h, btn, guard, toast, form } from './ui.js';
 import * as db from './db.js';
 import core from './pages/core.js';
-import accounts from './pages/accounts.js';
 import tools from './pages/tools.js';
-import routine from './pages/routine.js';
-import reference from './pages/reference.js';
+import simple from './pages/simple.js';
 
 const { S } = db;
-const PAGES = Object.fromEntries([...core, ...accounts, ...tools, ...routine, ...reference].map((p) => [p.slug, p]));
-const NAV = [
-  ['Scorecard', ['scorecard']],
-  ['Today', ['today']],
-  ['Accounts', ['tracker', 'loss-guard', 'payouts']],
-  ['Your tools', ['journal', 'calendar', 'lessons', 'validator', 'checklist', 'risk-calc', 'projection', 'max-loss', 'red-day', 'blueprint']],
-  ['Routine', ['prep', 'trading-day', 'debrief', 'weekly', 'plan']],
-  ['Reference', ['specs', 'market-calendar', 'rules', 'deals', 'tax']],
-  ['Overview', ['dashboard', 'monthly']],
-];
+// The simple layout: five pages. The other tools are still in the code and can be switched back on here.
+const pick = (list, slug, title) => ({ ...list.find((p) => p.slug === slug), title });
+const PAGES = Object.fromEntries([simple[0], pick(tools, 'validator', 'Trade Validator'), pick(core, 'journal', 'Trading Journal'),
+  pick(tools, 'risk-calc', 'Position Size & Risk Calculator'), simple[1]].map((p) => [p.slug, p]));
+const NAV = Object.keys(PAGES);
+const ALIAS = { tracker: 'settings', plan: 'settings', today: 'dashboard', lessons: 'journal' };
 const app = document.getElementById('app');
-const slugNow = () => (PAGES[location.hash.slice(2)] ? location.hash.slice(2) : 'today');
-const go = (slug) => { if (slugNow() === slug) render(); else location.hash = '#/' + slug; };
+const slugNow = () => (PAGES[location.hash.slice(2)] ? location.hash.slice(2) : 'dashboard');
+const go = (slug) => { slug = ALIAS[slug] || slug; if (slugNow() === slug) render(); else location.hash = '#/' + slug; };
 
 function render() {
   const slug = slugNow();
@@ -27,15 +21,15 @@ function render() {
   document.title = page.title + ' · Dungeon Lab';
   const side = h('nav', { class: 'side' },
     h('div', { class: 'brand' }, h('b', null, 'DUNGEON LAB'), h('span', { class: 'label' }, "Timmy's Dungeon")),
-    NAV.map(([grp, slugs]) => [h('div', { class: 'grp label' }, grp),
-      slugs.map((s) => h('a', { class: 'item' + (s === slug ? ' on' : ''), href: '#/' + s }, h('i'), PAGES[s].nav || PAGES[s].title))]),
+    h('div', { style: { marginTop: '20px' } }, NAV.map((s) => h('a', { class: 'item' + (s === slug ? ' on' : ''), href: '#/' + s, style: { padding: '10px', fontSize: '14px' } }, h('i'), PAGES[s].title))),
     h('div', { class: 'out' },
       h('div', { class: 'label', style: { padding: '0 10px 8px', textTransform: 'none', letterSpacing: 0 } }, S.mode === 'live' ? S.user.email : 'Preview mode'),
       S.mode === 'live' ? h('a', { class: 'item', href: '#', onclick: (e) => { e.preventDefault(); db.signOut(); } }, h('i'), 'Sign out') : null));
   const body = h('div');
   const main = h('main', { class: 'main' }, h('div', { class: 'col' },
     S.mode !== 'live' ? h('div', { class: 'banner info noprint' }, 'Preview mode. Nothing is connected yet, so data saves in this browser only.') : null,
-    h('h1', null, page.title), h('p', { class: 'desc' }, page.desc), body,
+    h('div', { class: 'row noprint', style: { justifyContent: 'flex-end', marginBottom: '8px' } }, btn('Validate', () => go('validator'), 'sm'), btn('Calculator', () => go('risk-calc'), 'ghost sm')),
+    page.bare ? null : [h('h1', null, page.title), h('p', { class: 'desc' }, page.desc)], body,
     h('div', { class: 'foot' }, 'Dungeon Lab is a tracking tool. It does not give trade signals, predictions, or financial advice.')));
   const menu = h('button', { class: 'btn ghost sm menu', onclick: () => side.classList.toggle('open') }, 'Menu');
   app.replaceChildren(h('div', { class: 'shell' }, menu, side, main));
