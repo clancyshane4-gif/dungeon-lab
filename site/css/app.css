@@ -17,7 +17,7 @@ h1{font-size:32px}h2{font-size:20px}h3{font-size:16px}
 .side a.item.on{color:var(--gold);background:#17150f}
 .side a.item i{width:5px;height:5px;border:1px solid currentColor;border-radius:50%;flex:none;opacity:.8}
 .side .out{margin-top:auto;padding-top:24px}
-.main{margin-left:240px;flex:1;min-width:0;padding:56px 40px 40px}
+.main{margin-left:240px;flex:1;min-width:0;padding:28px 40px 40px}
 .col{max-width:900px}
 .desc{color:var(--mut);margin:8px 0 28px;max-width:640px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px}
