@@ -3,11 +3,12 @@ import * as db from './db.js';
 import core from './pages/core.js';
 import tools from './pages/tools.js';
 import simple from './pages/simple.js';
+import timmy from './pages/timmy.js';
 
 const { S } = db;
-// The simple layout: five pages. The other tools are still in the code and can be switched back on here.
+// The simple layout: six pages. The other tools are still in the code and can be switched back on here.
 const pick = (list, slug, title) => ({ ...list.find((p) => p.slug === slug), title });
-const PAGES = Object.fromEntries([simple[0], pick(tools, 'validator', 'Trade Validator'), pick(core, 'journal', 'Trading Journal'),
+const PAGES = Object.fromEntries([simple[0], timmy[0], pick(tools, 'validator', 'Trade Validator'), pick(core, 'journal', 'Trading Journal'),
   pick(tools, 'risk-calc', 'Position Size & Risk Calculator'), simple[1]].map((p) => [p.slug, p]));
 const NAV = Object.keys(PAGES);
 const ALIAS = { tracker: 'settings', plan: 'settings', today: 'dashboard', lessons: 'journal' };
