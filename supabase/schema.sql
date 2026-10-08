@@ -125,6 +125,9 @@ create policy "own screenshots write" on storage.objects for insert to authentic
 create policy "own screenshots delete" on storage.objects for delete to authenticated
   using (bucket_id = 'screens' and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- ---------- AI Timmy (paying clients) ----------
+-- See ai-timmy.sql. It is also safe to run on a fresh project after this file.
+
 -- ---------- Your first access code ----------
 -- Change DUNGEON to whatever your coaches will say on the call. Add more rows any time in Table Editor > access_codes.
 insert into public.access_codes (code, note) values ('DUNGEON', 'Launch code');
