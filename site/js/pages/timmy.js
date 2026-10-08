@@ -4,6 +4,7 @@ import { h, btn, money, num, pct } from '../ui.js';
 import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
+import { renderAI } from './aitimmy.js';
 
 const { S } = db;
 let shown = [], pending = null;
@@ -108,6 +109,7 @@ export async function reply(text) {
 }
 
 function render(el, ctx) {
+  if (S.profile && S.profile.ai_access) return renderAI(el, ctx);
   if (!shown.length) shown.push({ who: 'ai', text: `Yo, welcome to the Dungeon. I'm Timmy's shortcut desk.\n\n${A.activeAccounts().length ? 'Tell me what you took and I will log it.' : 'First thing: set up your account in Settings so I have something to track.'}\n\n${HELP}` });
   const log = h('div', { class: 'chat' });
   const input = h('textarea', { rows: 2, placeholder: 'log short NQ 2 in 20150 stop 20180 out 20090' });
@@ -123,8 +125,24 @@ function render(el, ctx) {
   el.append(h('div', { class: 'card' }, log,
     h('div', { class: 'row', style: { marginBottom: '10px' } }, ['validate', 'accounts', 'stats', 'review', 'help'].map((c) => btn(c, () => go(c), 'ghost sm'))), input,
     h('div', { class: 'row between', style: { marginTop: '10px' } }, btn('Send', () => go(input.value)), btn('Clear', () => { shown = []; pending = null; ctx.refresh(); }, 'ghost sm'))),
-    h('p', { class: 'ital' }, 'Timmy here is a set of shortcuts, not an AI. He logs what you tell him and reads your own numbers back. He does not call trades, predict price, or give financial advice.'));
+    h('p', { class: 'ital' }, 'Timmy here is a set of shortcuts, not an AI. He logs what you tell him and reads your own numbers back. He does not call trades, predict price, or give financial advice.'),
+    S.mode === 'live' ? unlockCard(ctx) : null);
   draw();
+}
+
+function unlockCard(ctx) {
+  const inp = h('input', { placeholder: 'Mentorship code', style: { maxWidth: '240px' } });
+  const msg = h('span', { class: 'mut' });
+  return h('div', { class: 'card', style: { marginTop: '20px' } }, h('h3', null, 'Unlock AI Timmy'),
+    h('p', { class: 'mut' }, 'Mentorship clients get the full AI Timmy: a real coach in his voice who understands anything you type. Enter the code from your coach.'),
+    h('div', { class: 'row' }, inp, btn('Unlock', async () => {
+      try {
+        if (!inp.value.trim()) return;
+        await db.redeem(inp.value.trim());
+        await db.loadProfile();
+        if (S.profile.ai_access) { shown = []; pending = null; ctx.refresh(); } else msg.textContent = 'That code does not unlock AI Timmy. Check it with your coach.';
+      } catch (e) { msg.textContent = e.message; }
+    }, 'sm'), msg));
 }
 
 export default [{ slug: 'timmy', title: 'Timmy', desc: 'Log trades, check your room and run the checklist by typing. Everything he saves lands in your Journal and Dashboard.', render }];
