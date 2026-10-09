@@ -5,6 +5,7 @@ import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
 import { renderAI } from './aitimmy.js';
+import { tiltStatus } from './guard.js';
 
 const { S } = db;
 let shown = [], pending = null;
@@ -49,7 +50,9 @@ async function doLog(t) {
   const r = await A.logTrade(t);
   const tr = r.trade;
   const tail = tr.pnl > 0 ? 'Smacked it. Base hit, clean.' : tr.pnl < 0 ? "It's whatever, it happens. Was the stop protected?" : 'Flat. No damage.';
-  return `Logged. ${tr.direction} ${tr.instrument}, ${tr.contracts} ${tr.contracts === 1 ? 'contract' : 'contracts'}, ${money(tr.pnl)}, ${num(tr.r_multiple)}R on ${r.account.name}. ${tail}\n${room(r.account)}${r.warning ? '\n' + r.warning : ''}`;
+  const tl = tiltStatus();
+  const tiltLine = tl.level === 'stop' ? '\n' + tl.stop[0] + " You're done for today, bro." : tl.level === 'warn' ? '\n' + tl.warn[0] : '';
+  return `Logged. ${tr.direction} ${tr.instrument}, ${tr.contracts} ${tr.contracts === 1 ? 'contract' : 'contracts'}, ${money(tr.pnl)}, ${num(tr.r_multiple)}R on ${r.account.name}. ${tail}\n${room(r.account)}${r.warning ? '\n' + r.warning : ''}${tiltLine}`;
 }
 
 const GROUPS = [...T.VALIDATOR, { group: 'Last one', items: [['counter', 'Is this a counter-trend trade?'], ['lrl_at_stop', 'Is stacked LRL sitting right at your stop?']] }];
