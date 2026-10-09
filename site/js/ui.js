@@ -1,5 +1,17 @@
 // Small DOM helpers. Everything user-typed goes in as text nodes, never as HTML.
 
+// append / replaceChildren / prepend skip empty values (null, undefined, false) and accept lists,
+// the same way h() does. Without this a conditional piece prints the word "null" on the page.
+for (const name of ['append', 'prepend', 'replaceChildren']) {
+  for (const proto of [Element.prototype, DocumentFragment.prototype]) {
+    const orig = proto[name];
+    if (!orig || orig.__clean) continue;
+    const clean = function (...kids) { return orig.apply(this, kids.flat(Infinity).filter((k) => k != null && k !== false)); };
+    clean.__clean = true;
+    proto[name] = clean;
+  }
+}
+
 export function h(tag, attrs, ...kids) {
   const e = document.createElement(tag);
   if (attrs) for (const [k, v] of Object.entries(attrs)) {
