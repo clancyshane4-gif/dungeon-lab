@@ -14,7 +14,7 @@ const PAGES = Object.fromEntries([simple[0], timmy[0], pick(tools, 'validator', 
 const NAV = Object.keys(PAGES);
 const ALIAS = { 'risk-calc': 'pre-trade', tracker: 'settings', plan: 'settings', today: 'dashboard', lessons: 'journal' };
 const app = document.getElementById('app');
-const slugNow = () => (PAGES[location.hash.slice(2)] ? location.hash.slice(2) : 'dashboard');
+const slugNow = () => { const s = location.hash.slice(2); const a = ALIAS[s] || s; return PAGES[a] ? a : 'dashboard'; };
 const go = (slug) => { slug = ALIAS[slug] || slug; if (slugNow() === slug) render(); else location.hash = '#/' + slug; };
 
 function render() {
