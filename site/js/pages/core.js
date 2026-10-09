@@ -2,6 +2,7 @@ import { h, btn, card, empty, form, table, money, moneyEl, num, pct, fmtDate, st
 import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
+import { reviewDrawer, tiltCard, tiltStatus } from './guard.js';
 
 const { S } = db;
 const accOpts = (list) => list.map((a) => [a.id, a.name]);
@@ -102,7 +103,7 @@ export function newsOn(date) {
 function journal(el, ctx) {
   const pre = A.nav.prefill?.journal; A.nav.prefill = null;
   const acts = A.activeAccounts();
-  for (const s of acts.map((a) => A.statusOf(a))) if (s.daily_limit_hit) el.append(h('div', { class: 'banner' }, `Daily loss limit hit on ${s.name}. Stop trading this account today.`));
+  { const t = tiltStatus(); if (t.level !== 'ok') el.append(tiltCard(t)); }
   const defaults = { date: T.today(), instrument: 'NQ', point_value: 20, session: T.sessionAt(T.nyParts().minutes), account_id: acts.length === 1 ? acts[0].id : null, ...pre };
   const f = form(tradeDefs(acts), defaults, pointSync);
   const file = h('input', { type: 'file', accept: 'image/*' });
@@ -117,6 +118,7 @@ function journal(el, ctx) {
       const r = await A.logTrade(v);
       toast(`Trade saved. ${money(r.trade.pnl)}, ${num(r.trade.r_multiple)}R.`);
       ctx.refresh();
+      reviewDrawer(r.trade, ctx);
     })))));
   el.append(card('Recent trades', table(tradeCols(), A.tradesIn().slice(0, 100), { onRow: (t) => tradeDrawer(t, ctx), emptyText: 'No trades yet. Log your first one above, every entry is a data point.' })));
 }
