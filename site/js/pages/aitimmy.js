@@ -4,6 +4,7 @@ import { h, btn } from '../ui.js';
 import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
+import { tiltStatus } from './guard.js';
 
 const { S } = db;
 let history = [], shown = [];
@@ -14,6 +15,7 @@ const TOOLS = {
   get_trades: (i) => A.getTrades(i),
   get_stats: (i) => A.getStats({ days: 30, ...i }),
   get_week_summary: (i) => A.weekSummary(i.week_start),
+  get_tilt_status: () => { const t = tiltStatus(); return { level: t.level, stop_reasons: t.stop, warnings: t.warn, trades_today: t.trades, pnl_today: t.pnl, rules: t.rules }; },
   get_my_rules: () => { const p = db.doc('trading_plan', {}) || {}; return { max_risk_per_trade: p.max_risk_per_trade ?? null, daily_max_loss: p.daily_max_loss ?? null, max_trades_per_day: p.max_trades_per_day ?? null }; },
   grade_setup: (i) => {
     let account_ok = null;
