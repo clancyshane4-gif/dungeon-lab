@@ -3,15 +3,16 @@ import * as db from './db.js';
 import core from './pages/core.js';
 import tools from './pages/tools.js';
 import simple from './pages/simple.js';
+import guardPages from './pages/guard.js';
 import timmy from './pages/timmy.js';
 
 const { S } = db;
 // The simple layout: six pages. The other tools are still in the code and can be switched back on here.
 const pick = (list, slug, title) => ({ ...list.find((p) => p.slug === slug), title });
 const PAGES = Object.fromEntries([simple[0], timmy[0], pick(tools, 'validator', 'Trade Validator'), pick(core, 'journal', 'Trading Journal'),
-  pick(tools, 'risk-calc', 'Position Size & Risk Calculator'), simple[1]].map((p) => [p.slug, p]));
+  guardPages[0], simple[1]].map((p) => [p.slug, p]));
 const NAV = Object.keys(PAGES);
-const ALIAS = { tracker: 'settings', plan: 'settings', today: 'dashboard', lessons: 'journal' };
+const ALIAS = { 'risk-calc': 'pre-trade', tracker: 'settings', plan: 'settings', today: 'dashboard', lessons: 'journal' };
 const app = document.getElementById('app');
 const slugNow = () => (PAGES[location.hash.slice(2)] ? location.hash.slice(2) : 'dashboard');
 const go = (slug) => { slug = ALIAS[slug] || slug; if (slugNow() === slug) render(); else location.hash = '#/' + slug; };
@@ -29,7 +30,7 @@ function render() {
   const body = h('div');
   const main = h('main', { class: 'main' }, h('div', { class: 'col' },
     S.mode !== 'live' ? h('div', { class: 'banner info noprint' }, 'Preview mode. Nothing is connected yet, so data saves in this browser only.') : null,
-    h('div', { class: 'row noprint', style: { justifyContent: 'flex-end', marginBottom: '8px' } }, btn('Validate', () => go('validator'), 'sm'), btn('Calculator', () => go('risk-calc'), 'ghost sm')),
+    h('div', { class: 'row noprint', style: { justifyContent: 'flex-end', marginBottom: '8px' } }, btn('Validate', () => go('validator'), 'sm'), btn('Pre-Trade Check', () => go('pre-trade'), 'ghost sm')),
     page.bare ? null : [h('h1', null, page.title), h('p', { class: 'desc' }, page.desc)], body,
     h('div', { class: 'foot' }, 'Dungeon Lab is a tracking tool. It does not give trade signals, predictions, or financial advice.')));
   const menu = h('button', { class: 'btn ghost sm menu', onclick: () => side.classList.toggle('open') }, 'Menu');
