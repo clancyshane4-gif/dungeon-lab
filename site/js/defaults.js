@@ -5,7 +5,7 @@ const RULE_FIRMS = ['Lucid Trading', 'Tradeify', 'FundedNext', 'Apex', 'My Funde
 // Rule numbers are left blank on purpose. Firms change them often, so each trader confirms and fills in their own.
 export const DEFAULT_RULES = RULE_FIRMS.flatMap((firm) => [25000, 50000, 100000, 150000].map((size) => ({
   firm, plan: '', size, profit_target: null, max_drawdown: null, drawdown_type: '', daily_loss_limit: null, consistency: null, min_days: null, notes: 'Fill in from the firm site',
-})));
+}))).map((r) => (r.firm === 'Lucid Trading' && r.size === 50000 ? { ...r, plan: 'Flex', profit_target: 3000, max_drawdown: 2000, drawdown_type: 'EOD Trailing', consistency: 50, notes: "From Timmy's Lucid video (eval rules). Confirm on the firm's site" } : r));
 
 const idx = '09:30 to 16:00';
 const margin = 'Set by your firm or broker';
