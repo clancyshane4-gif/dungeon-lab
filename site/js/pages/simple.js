@@ -3,6 +3,7 @@ import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
 import accounts from './accounts.js';
+import { tiltStatus } from './guard.js';
 
 const { S } = db;
 const tracker = accounts.find((p) => p.slug === 'tracker').render;
@@ -36,8 +37,9 @@ function dashboard(el, ctx) {
       badge(sess || 'Outside killzone', sess ? 'green' : '')));
 
   const notes = [];
-  for (const s of acts) { const w = T.roomWarning(s); if (w) notes.push(w); }
-  if (all.losing_streak >= 3) notes.push('Three losses in a row. Step away for the session.');
+  const tilt = tiltStatus(day);
+  notes.push(...tilt.stop, ...tilt.warn);
+  if (tilt.level === 'stop') notes.unshift("You're done for today.");
   el.append(h('div', { class: 'card' + (notes.length ? ' danger' : '') }, h('h3', null, "Today's Briefing"),
     notes.length ? notes.map((n) => h('p', { class: 'red', style: { margin: '8px 0 0' } }, n))
       : h('p', { class: 'mut', style: { margin: '8px 0 0' } }, !S.accounts.length ? 'Welcome to Dungeon Lab. Start by setting up your account in Settings.' : !S.trades.length ? 'Your account is set up. Validate your first setup, then log the trade.' : 'Every account has room. Validate before you click.')));
@@ -70,8 +72,8 @@ function dashboard(el, ctx) {
 
 function settings(el, ctx) {
   const cur = db.doc('trading_plan', {}) || {};
-  const f = form([{ key: 'max_risk_per_trade', label: 'Max risk per trade ($)', type: 'number' }, { key: 'daily_max_loss', label: 'Daily max loss ($)', type: 'number' }, { key: 'max_trades_per_day', label: 'Max trades per day', type: 'number' }], cur);
-  el.append(card('My rules', h('p', { class: 'mut' }, 'Your Dashboard checks today against these.'), f.el,
+  const f = form([{ key: 'max_risk_per_trade', label: 'Max risk per trade ($)', type: 'number' }, { key: 'daily_max_loss', label: 'Daily max loss ($)', type: 'number' }, { key: 'max_trades_per_day', label: 'Max trades per day', type: 'number' }, { key: 'max_losses_in_row', label: 'Done after this many losses in a row', type: 'number' }, { key: 'stop_after_win', label: 'Stop for the day after a win?', type: 'yesno' }], { max_trades_per_day: 3, max_losses_in_row: 2, stop_after_win: true, ...cur });
+  el.append(card('My rules', h('p', { class: 'mut' }, "Your Dashboard, Pre-Trade Check and Timmy use these. Timmy's own defaults: 3 trades max, off after a win, off after 2 losses in a row."), f.el,
     h('div', { style: { marginTop: '18px' } }, btn('Save rules', guard(async () => { await db.setDoc('trading_plan', { ...cur, ...f.get() }); toast('Rules saved'); ctx.refresh(); })))));
   el.append(h('h2', { style: { margin: '32px 0 16px' } }, 'My accounts'));
   tracker(el, ctx);
