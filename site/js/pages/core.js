@@ -3,6 +3,7 @@ import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
 import { reviewDrawer, tiltCard, tiltStatus } from './guard.js';
+import { importCard } from './importer.js';
 
 const { S } = db;
 const accOpts = (list) => list.map((a) => [a.id, a.name]);
@@ -107,6 +108,7 @@ function journal(el, ctx) {
   const defaults = { date: T.today(), instrument: 'NQ', point_value: 20, session: T.sessionAt(T.nyParts().minutes), account_id: acts.length === 1 ? acts[0].id : null, ...pre };
   const f = form(tradeDefs(acts), defaults, pointSync);
   const file = h('input', { type: 'file', accept: 'image/*' });
+  if (S.accounts.length) el.append(importCard(ctx));
   el.append(card('Log a trade',
     acts.length ? null : h('p', { class: 'ital' }, 'Set up your account in Settings first, then log trades against it.'),
     f.el,
