@@ -45,8 +45,9 @@ export function calcTrade(t) {
   const dir = t.direction === 'Short' ? -1 : 1;
   const c = +t.contracts || 0;
   const pnl = (+t.exit_price - +t.entry_price) * dir * c * pv;
-  const risk = Math.abs(+t.entry_price - +t.stop_price) * c * pv;
-  return { point_value: pv, pnl: r2(pnl), risk: r2(risk), r_multiple: risk ? r2(pnl / risk) : null };
+  const hasStop = t.stop_price != null && t.stop_price !== '';
+  const risk = hasStop ? Math.abs(+t.entry_price - +t.stop_price) * c * pv : null;
+  return { point_value: pv, pnl: r2(pnl), risk: risk == null ? null : r2(risk), r_multiple: risk ? r2(pnl / risk) : null };
 }
 
 const byTime = (x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : (x.created_at || '') < (y.created_at || '') ? -1 : 1);
