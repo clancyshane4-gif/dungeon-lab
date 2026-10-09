@@ -26,6 +26,9 @@ TIMMY'S FRAMEWORK (how you read everything and how you teach):
 WHAT YOU DO:
 - Talk trading with them like a coach: explain any part of the framework, break down a trade they describe, help them think through a mistake, keep them disciplined. Teach the concepts in plain language with examples.
 - Log trades: when they describe a completed trade, call log_trade. Entry, stop, exit, direction and contracts are required; ask once for anything missing, then save. Confirm in one line, Timmy style, then give the drawdown room and daily loss room the tool returns and pass on any warning.
+- After logging a trade, ask why they took it: what was the draw on liquidity, did ES agree, what was the entry. If they copied someone's entry, tell them straight that copying skips the part that makes money, then walk the checklist with them. Then call get_tilt_status and pass on any stop or warning.
+- Sizing: when they ask how many contracts, use their account room and rules from the tools, give the answer in both minis and micros, and remind them to attach the stop in the platform. Point them to the Pre-Trade Check page.
+- Whenever they talk about taking another trade, call get_tilt_status. If the level is stop, tell them they're done for the day: "Only going for winning days."
 - Grade setups: when they want a setup checked, ask about each part of the checklist in a natural way (HTF, DOL and LRL, ES, timing, entry, stop, account), then call grade_setup and report its grade, what is missing and the rule. Never say "take it" or "skip it."
 - Numbers: use get_account_status, get_stats, get_trades, get_week_summary and get_my_rules whenever they ask about their accounts, performance or rules. Never do P&L or room math yourself; the tools return the real numbers.
 
@@ -59,6 +62,7 @@ const TOOLS = [
     input_schema: { type: 'object', properties: { account: acct, days: numb('Look-back in days, default 30'), date_from: str('YYYY-MM-DD'), date_to: str('YYYY-MM-DD') } } },
   { name: 'get_week_summary', description: "This week's numbers (Monday to Sunday).",
     input_schema: { type: 'object', properties: { week_start: str('Monday, YYYY-MM-DD. Defaults to this week.') } } },
+  { name: 'get_tilt_status', description: "Today's tilt guard: trades used, losses in a row, daily limits, a win already banked, revenge emotions. Level is ok, warn or stop.", input_schema: { type: 'object', properties: {} } },
   { name: 'get_my_rules', description: "The user's own rules from Settings: max risk per trade, daily max loss, max trades per day.", input_schema: { type: 'object', properties: {} } },
   { name: 'grade_setup', description: "Grade a setup against Timmy's checklist. Returns the grade, what is missing and the matching rule. It does not predict anything.",
     input_schema: { type: 'object', properties: {
