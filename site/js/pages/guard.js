@@ -142,7 +142,7 @@ export function reviewDrawer(trade, ctx) {
       return wrap;
     };
     body.append(h('p', { class: 'mut' }, `${trade.direction} ${trade.instrument}, ${money(trade.pnl)}. Six quick taps. This is how the Lab learns what actually makes you money.`),
-      QS.map(([k, q]) => h('div', { style: { margin: '14px 0' } }, h('p', { style: { margin: '0 0 6px' } }, q), yn((v) => { ans[k] = v; }))),
+      ...QS.map(([k, q]) => h('div', { style: { margin: '14px 0' } }, h('p', { style: { margin: '0 0 6px' } }, q), yn((v) => { ans[k] = v; }))),
       h('div', { style: { margin: '14px 0' } }, h('p', { style: { margin: '0 0 6px' } }, "Did you copy someone else's entry?"), yn((v) => { copied = v; })));
     const result = h('div');
     body.append(h('div', { class: 'row', style: { marginTop: '18px' } }, btn('Save review', guard(async () => {
