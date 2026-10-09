@@ -49,30 +49,45 @@ export function rootOf(symbol) {
   return null;
 }
 
-// Returns { date: 'YYYY-MM-DD', minutes, iso } in New York time. Times without an offset are taken as New York wall clock.
-export function parseTime(v) {
+// Wall-clock time in a time zone -> the real moment (handles daylight saving).
+function zoned(y, mo, d, hr, mi, se, tz) {
+  const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+  const want = Date.UTC(y, mo - 1, d, hr, mi, se);
+  let t = want;
+  for (let k = 0; k < 3; k++) {
+    const p = Object.fromEntries(f.formatToParts(new Date(t)).map((x) => [x.type, +x.value || x.value]));
+    const seen = Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second);
+    if (seen === want) break;
+    t += want - seen;
+  }
+  return new Date(t);
+}
+
+export const ZONES = [['America/New_York', 'New York (ET)'], ['America/Chicago', 'Chicago (CT)'], ['America/Denver', 'Denver (MT)'], ['America/Los_Angeles', 'Los Angeles (PT)'], ['Europe/London', 'London'], ['UTC', 'UTC']];
+
+// Returns { date: 'YYYY-MM-DD', minutes, iso } in New York time.
+// Times with an offset (Z, -04:00) are exact. Times without one are read in tz, the zone the trader's platform is set to.
+export function parseTime(v, tz = 'America/New_York') {
   const s = String(v || '').trim();
   if (!s) return null;
+  const ny = (d) => { const p = T.nyParts(d); return { date: p.date, minutes: p.minutes, iso: d.toISOString() }; };
   if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/i.test(s) || /\s[+-]\d{2}:?\d{2}$/.test(s)) {
     let d = new Date(s);
     if (isNaN(d)) { // "09/24/2024 09:31:05 -04:00"
       const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([+-]\d{2}):?(\d{2})$/);
       if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; d = new Date(`${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}T${m[4].padStart(2, '0')}:${m[5]}:${m[6] || '00'}${m[7]}:${m[8]}`); }
     }
-    if (!isNaN(d)) { const p = T.nyParts(d); return { date: p.date, minutes: p.minutes, iso: d.toISOString() }; }
+    if (!isNaN(d)) return ny(d);
   }
   const m = s.match(/^(\d{1,4})[/.-](\d{1,2})[/.-](\d{1,4})(?:[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*(AM|PM)?)?/i);
   if (!m) return null;
   let y, mo, d;
   if (m[1].length === 4) { y = +m[1]; mo = +m[2]; d = +m[3]; } else { mo = +m[1]; d = +m[2]; y = +m[3]; if (y < 100) y += 2000; }
   if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
-  let hr = +(m[4] || 0); const mi = +(m[5] || 0), se = +(m[6] || 0);
+  if (m[4] == null) { const date = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`; return { date, minutes: null, iso: zoned(y, mo, d, 12, 0, 0, 'America/New_York').toISOString() }; }
+  let hr = +m[4]; const mi = +m[5], se = +(m[6] || 0);
   if (m[7]) { const pm = /pm/i.test(m[7]); if (hr === 12) hr = pm ? 12 : 0; else if (pm) hr += 12; }
-  const guess = Date.UTC(y, mo - 1, d, hr, mi, se);
-  const p = T.nyParts(new Date(guess));
-  const wall = Date.UTC(+p.date.slice(0, 4), +p.date.slice(5, 7) - 1, +p.date.slice(8, 10), Math.floor(p.minutes / 60), p.minutes % 60, se);
-  const date = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  return { date, minutes: m[4] != null ? hr * 60 + mi : null, iso: new Date(guess - (wall - guess)).toISOString() };
+  return ny(zoned(y, mo, d, hr, mi, se, tz));
 }
 
 // ---------- Formats ----------
@@ -98,14 +113,18 @@ function dirOf(v) {
 }
 
 // Turns the file into raw trade rows. Throws a plain-English error if the file isn't a trade export.
-export function readTrades(text) {
+export function readTrades(text, tz = 'America/New_York') {
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('That file is empty or only has a header row.');
   // Some exports have a title line or two before the header. Find the first row that looks like a header.
   let hi = rows.findIndex((r) => { const n = r.map(norm); return n.some((x) => ALIASES.symbol.includes(x)) && (n.includes('buyprice') || n.some((x) => ALIASES.entry.includes(x))); });
   if (hi < 0) throw new Error("That doesn't look like a trade history file. Use the Performance report from Tradovate, the Trades export from ProjectX or TopstepX, or the Trades tab from NinjaTrader.");
   const head = rows[hi].map(norm);
-  const body = rows.slice(hi + 1);
+  // Exact copies of a row (two reports pasted together) are dropped. Real rows always differ: fill ids, trade numbers or times.
+  const seen = new Set();
+  const all = rows.slice(hi + 1);
+  const body = all.filter((r) => { const k = r.join('\u0001'); if (seen.has(k)) return false; seen.add(k); return true; });
+  const dupRows = all.length - body.length;
   if (body.length > MAX_ROWS) throw new Error(`That file has ${body.length} rows. Import ${MAX_ROWS} or fewer at a time (pick a shorter date range when you download it).`);
   const col = (k) => { for (const a of ALIASES[k]) { const i = head.indexOf(a); if (i >= 0) return i; } return -1; };
   const get = (r, i) => (i >= 0 ? r[i] : undefined);
@@ -114,21 +133,21 @@ export function readTrades(text) {
     // Tradovate Performance report: one row per buy/sell fill pair.
     const c = { sym: col('symbol'), qty: col('qty'), bp: head.indexOf('buyprice'), sp: head.indexOf('sellprice'), bt: head.indexOf('boughttimestamp'), st: head.indexOf('soldtimestamp'), pnl: col('pnl') };
     body.forEach((r, n) => {
-      const bt = parseTime(get(r, c.bt)), st = parseTime(get(r, c.st));
+      const bt = parseTime(get(r, c.bt), tz), st = parseTime(get(r, c.st), tz);
       const long = bt && st ? bt.iso <= st.iso : true;
       out.push({ line: hi + n + 2, symbol: get(r, c.sym), qty: numOf(get(r, c.qty)), direction: long ? 'Long' : 'Short',
         entry: numOf(get(r, long ? c.bp : c.sp)), exit: numOf(get(r, long ? c.sp : c.bp)), tIn: long ? bt : st, tOut: long ? st : bt, pnl: parseMoney(get(r, c.pnl)), fees: null });
     });
-    return { format: 'Tradovate', rows: out };
+    return { format: 'Tradovate', rows: out, dupRows };
   }
   const c = Object.fromEntries(Object.keys(ALIASES).map((k) => [k, col(k)]));
   const fmt = head.includes('contractname') || head.includes('enteredat') ? 'ProjectX' : head.includes('marketpos') ? 'NinjaTrader' : 'CSV';
   body.forEach((r, n) => {
-    const tIn = parseTime(get(r, c.tEntry)) || parseTime(get(r, c.day));
+    const tIn = parseTime(get(r, c.tEntry), tz) || parseTime(get(r, c.day), tz);
     out.push({ line: hi + n + 2, symbol: get(r, c.symbol), qty: Math.abs(numOf(get(r, c.qty)) ?? NaN), direction: dirOf(get(r, c.dir)),
-      entry: numOf(get(r, c.entry)), exit: numOf(get(r, c.exit)), tIn, tOut: parseTime(get(r, c.tExit)), pnl: parseMoney(get(r, c.pnl)), fees: parseMoney(get(r, c.fees)) });
+      entry: numOf(get(r, c.entry)), exit: numOf(get(r, c.exit)), tIn, tOut: parseTime(get(r, c.tExit), tz), pnl: parseMoney(get(r, c.pnl)), fees: parseMoney(get(r, c.fees)) });
   });
-  return { format: fmt, rows: out };
+  return { format: fmt, rows: out, dupRows };
 }
 
 // Cleans, merges scale-outs into one trade, and builds Journal trades.
@@ -183,6 +202,7 @@ export function importCard(ctx) {
   const sel = h('select', null, h('option', { value: '' }, 'Pick the account these trades were on'), accts.map((a) => h('option', { value: a.id }, a.name)));
   if (accts.length === 1) sel.value = accts[0].id;
   const file = h('input', { type: 'file', accept: '.csv,.txt,text/csv' });
+  const zone = h('select', null, ZONES.map(([v, l]) => h('option', { value: v }, l)));
   const out = h('div');
   let parsed = null;
 
@@ -191,10 +211,10 @@ export function importCard(ctx) {
     parsed = null;
     if (!file.files[0]) return;
     if (/\.xlsx?$/i.test(file.files[0].name)) throw new Error('That is an Excel file. Download the CSV version from your platform instead.');
-    const { format, rows } = readTrades(await file.files[0].text());
+    const { format, rows, dupRows } = readTrades(await file.files[0].text(), zone.value);
     const { trades, bad } = buildTrades(rows, format);
     if (!trades.length) throw new Error(`Found no trades I could read in that file${bad.length ? ` (${bad.length} rows were missing ${bad[0].why})` : ''}.`);
-    parsed = { format, trades, bad };
+    parsed = { format, trades, bad, dupRows };
     preview();
   });
   function preview() {
@@ -208,6 +228,7 @@ export function importCard(ctx) {
     out.replaceChildren(
       h('div', { class: 'stats', style: { marginTop: '16px' } }, stat('From', parsed.format), stat('New trades', String(fresh.length)), stat('P&L', money(T.sum(fresh, (t) => t.pnl)))),
       dup ? h('p', { class: 'mut' }, `${dup} ${dup === 1 ? 'trade is' : 'trades are'} already in your journal and will be skipped.`) : null,
+      parsed.dupRows ? h('p', { class: 'mut' }, `${parsed.dupRows} repeated ${parsed.dupRows === 1 ? 'row' : 'rows'} in the file ignored (the same line appeared twice).`) : null,
       parsed.bad.length ? h('p', { class: 'mut' }, `${parsed.bad.length} ${parsed.bad.length === 1 ? 'row' : 'rows'} skipped (for example line ${parsed.bad[0].line}: ${parsed.bad[0].why}).`) : null,
       table(cols, fresh.slice(0, 50), { emptyText: 'Every trade in this file is already in your journal.' }),
       fresh.length > 50 ? h('p', { class: 'mut' }, `Showing 50 of ${fresh.length}.`) : null,
@@ -231,6 +252,7 @@ export function importCard(ctx) {
   }
   file.addEventListener('change', show);
   sel.addEventListener('change', preview);
+  zone.addEventListener('change', show);
 
   const help = h('details', { style: { marginTop: '12px' } }, h('summary', { class: 'mut', style: { cursor: 'pointer' } }, 'Where do I get the file?'),
     h('p', { class: 'mut' }, h('b', null, 'Tradovate: '), 'open the Performance report for your account, pick the dates, and download it as CSV.'),
@@ -242,6 +264,8 @@ export function importCard(ctx) {
     h('p', { class: 'mut', style: { marginTop: 0 } }, 'Skip the typing. Download your trade history and drop the file here. Trades already in your journal are skipped, so it is safe to import the same week twice.'),
     h('div', { class: 'grid3' },
       h('label', { class: 'fld' }, h('span', { class: 'label' }, 'Account'), sel),
-      h('label', { class: 'fld span2' }, h('span', { class: 'label' }, 'Trade history file (CSV)'), file)),
+      h('label', { class: 'fld' }, h('span', { class: 'label' }, 'Trade history file (CSV)'), file),
+      h('label', { class: 'fld' }, h('span', { class: 'label' }, 'Platform time zone'), zone)),
+    h('p', { class: 'mut', style: { fontSize: '12px', margin: '8px 0 0' } }, 'Set this to the time zone your platform shows. Most US futures platforms default to New York or Chicago. Check the times in the preview match your trades.'),
     help, out);
 }
