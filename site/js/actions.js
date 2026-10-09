@@ -31,15 +31,18 @@ function summary(a) {
   return rest;
 }
 
-function cleanTrade(input) {
-  const need = ['direction', 'contracts', 'entry_price', 'stop_price', 'exit_price'];
+// Imported trades have no stop (platforms don't export it). Editing one keeps the stop optional until it is added.
+function cleanTrade(input, { stopOptional = false } = {}) {
+  const need = ['direction', 'contracts', 'entry_price', 'exit_price', ...(stopOptional ? [] : ['stop_price'])];
   const missing = need.filter((k) => input[k] == null || input[k] === '');
   if (missing.length) throw new Error('Missing: ' + missing.map((k) => k.replace('_', ' ')).join(', ') + '.');
   const t = { ...input };
   t.instrument = t.instrument || 'NQ';
   t.direction = /^s/i.test(t.direction) ? 'Short' : 'Long';
   t.date = t.date || T.today();
+  if (stopOptional && (t.stop_price == null || t.stop_price === '')) t.stop_price = null;
   for (const k of ['contracts', 'entry_price', 'stop_price', 'exit_price']) {
+    if (k === 'stop_price' && t[k] === null) continue;
     t[k] = +t[k];
     if (!Number.isFinite(t[k])) throw new Error(`${k.replace('_', ' ')} must be a number.`);
   }
@@ -57,7 +60,7 @@ export async function logTrade(input) {
 }
 
 export async function updateTrade(id, input) {
-  const t = cleanTrade(input);
+  const t = cleanTrade(input, { stopOptional: input.stop_price == null || input.stop_price === '' });
   const trade = await db.update('trades', id, t);
   const a = S.accounts.find((x) => x.id === trade.account_id);
   return { trade, warning: a ? T.roomWarning(statusOf(a)) || null : null };
