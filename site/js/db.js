@@ -112,6 +112,17 @@ export async function add(kind, obj) {
   return row;
 }
 
+// Many trades in one go (file import). created_at carries the trade's entry time so same-day order is right.
+export async function addMany(kind, objs) {
+  if (!objs.length) return [];
+  const keys = [...COLS[kind], 'created_at'];
+  const bodies = objs.map((o) => pick(o, keys));
+  const rows = S.mode === 'live' ? ok(await sb.from(kind).insert(bodies).select()) : bodies.map((b) => ({ id: uid(), created_at: new Date().toISOString(), ...b }));
+  S[kind].push(...rows);
+  if (S.mode !== 'live') persistLocal();
+  return rows;
+}
+
 export async function update(kind, id, patch) {
   const arr = list(kind);
   const i = arr.findIndex((r) => r.id === id);
