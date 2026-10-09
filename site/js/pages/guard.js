@@ -131,6 +131,7 @@ const QS = [
   ['stop', 'Protected stop and a base-hit target?'],
 ];
 export function reviewDrawer(trade, ctx) {
+  // trade is reassigned after saving so a second save works on the stored version.
   drawer('Why did you take it?', (body, close) => {
     const ans = {};
     let copied = null;
@@ -144,15 +145,21 @@ export function reviewDrawer(trade, ctx) {
     body.append(h('p', { class: 'mut' }, `${trade.direction} ${trade.instrument}, ${money(trade.pnl)}. Six quick taps. This is how the Lab learns what actually makes you money.`),
       ...QS.map(([k, q]) => h('div', { style: { margin: '14px 0' } }, h('p', { style: { margin: '0 0 6px' } }, q), yn((v) => { ans[k] = v; }))),
       h('div', { style: { margin: '14px 0' } }, h('p', { style: { margin: '0 0 6px' } }, "Did you copy someone else's entry?"), yn((v) => { copied = v; })));
+    const stopIn = trade.stop_price == null ? h('input', { type: 'number', step: 'any', inputmode: 'decimal', placeholder: 'Where was your stop?' }) : null;
+    if (stopIn) body.append(h('label', { class: 'fld', style: { margin: '14px 0' } }, h('span', { class: 'label' }, 'Your stop price (for R)'), stopIn));
     const result = h('div');
     body.append(h('div', { class: 'row', style: { marginTop: '18px' } }, btn('Save review', guard(async () => {
       if (QS.some(([k]) => ans[k] == null)) throw new Error('Answer all six, yes or no.');
       const g = T.gradeSetup({ htf_left: ans.htf, htf_gap: ans.htf, dol: ans.dol, lrl: ans.dol, base_target: ans.stop, es_looked: true, es_same: ans.es, smt: ans.es,
         past_open: ans.open, displacing: ans.open, no_news: true, displacement_candle: ans.entry, ifg_cisd: ans.entry, protected_stop: ans.stop, be_level: ans.stop });
       const note = `Review: grades ${g.grade}${g.missing.length ? `, missing ${g.missing.join(', ')}` : ''}.${copied ? ' Copied entry.' : ''}`;
-      await A.updateTrade(trade.id, { ...trade, setup_grade: g.grade, notes: [trade.notes, note].filter(Boolean).join('\n') });
+      const stop = stopIn && stopIn.value !== '' ? +stopIn.value : trade.stop_price;
+      if (stop != null && (trade.direction === 'Long' ? stop >= trade.entry_price : stop <= trade.entry_price)) throw new Error(`For a ${trade.direction.toLowerCase()} the stop goes ${trade.direction === 'Long' ? 'below' : 'above'} the entry (${trade.entry_price}).`);
+      const notes = [trade.notes, note].filter(Boolean).join('\n').replace(/ No stop in the file: add it in the review to get R\./, stop != null ? '' : ' No stop in the file: add it in the review to get R.');
+      const saved = await A.updateTrade(trade.id, { ...trade, stop_price: stop, setup_grade: g.grade, notes });
+      trade = saved.trade;
       result.replaceChildren(h('div', { class: 'card', style: { marginTop: '16px' } }, h('div', { class: 'row between' }, h('h3', null, 'Grade'), badge(g.grade, g.grade === 'C' ? 'red' : 'gold')),
-        h('p', null, g.line), copied ? h('p', { class: 'red' }, "Copying entries skips the part that makes you money. Next time, run the Pre-Trade Check on your own read first.") : null,
+        h('p', null, g.line), trade.r_multiple != null ? h('p', { class: 'mut' }, `That trade was ${num(trade.r_multiple)}R.`) : null, copied ? h('p', { class: 'red' }, "Copying entries skips the part that makes you money. Next time, run the Pre-Trade Check on your own read first.") : null,
         trade.pnl > 0 && g.grade === 'C' ? h('p', { class: 'mut' }, 'A win on a C setup is luck, not edge. Do not let it teach you the wrong lesson.') : null,
         trade.pnl < 0 && (g.grade === 'A+' || g.grade === 'A') ? h('p', { class: 'mut' }, "Good setup, it just didn't work. It's whatever, it happens. That loss is part of the edge.") : null));
       toast('Review saved'); ctx.refresh();
