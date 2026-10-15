@@ -5,6 +5,7 @@ import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
 import { tiltStatus } from './guard.js';
+import { displayName } from './profile.js';
 
 const { S } = db;
 let history = [], shown = [];
@@ -26,7 +27,7 @@ const TOOLS = {
 };
 
 async function ask() {
-  const res = await fetch('/api/timmy', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (await db.token()) }, body: JSON.stringify({ messages: history }) });
+  const res = await fetch('/api/timmy', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (await db.token()) }, body: JSON.stringify({ messages: history, name: displayName() }) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'AI Timmy is unavailable right now.');
   return data;
