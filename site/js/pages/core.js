@@ -79,7 +79,7 @@ function today(el, ctx) {
       stat('Today', fmtDate(p.date), `${p.weekday}, ${p.hhmm} New York`),
       stat('What session is it?', sess || 'Outside killzone', sess ? 'Killzone is open' : 'No active session right now'),
       stat('Active accounts', acts.length)),
-    h('div', { class: 'row mb' }, btn('Log a trade', () => ctx.go('journal')), btn('Run the Validator', () => ctx.go('validator'), 'ghost')),
+    h('div', { class: 'row mb' }, btn('Log a trade', () => ctx.go('journal')), btn('Pre-Trade Check', () => ctx.go('pre-trade'), 'ghost')),
     card('News today', news.length ? table([{ label: 'Time (NY)', get: (n) => n.time || '—' }, { label: 'Event', get: (n) => n.event }, { label: 'Impact', get: (n) => badge(n.impact || 'High', n.impact === 'Medium' ? '' : 'red') }], news)
       : empty('No red-folder events saved for today. Check the Market Calendar.')),
     card('Active accounts', acts.length ? table([
@@ -111,7 +111,7 @@ function journal(el, ctx) {
   el.append(reviewQueue(ctx, 10));
   if (S.accounts.length) el.append(importCard(ctx));
   el.append(card('Log a trade',
-    acts.length ? null : h('p', { class: 'ital' }, 'Set up your account in Settings first, then log trades against it.'),
+    acts.length ? null : h('p', { class: 'ital' }, 'Set up your account in Accounts & rules first, then log trades against it.'),
     f.el,
     h('label', { class: 'fld', style: { marginTop: '14px' } }, h('span', { class: 'label' }, 'Chart screenshot (optional)'), file),
     h('div', { style: { marginTop: '18px' } }, btn('Save trade', guard(async () => {
