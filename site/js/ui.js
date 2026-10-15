@@ -47,7 +47,7 @@ export const btn = (label, onclick, cls = '') => h('button', { class: 'btn ' + c
 export const card = (title, ...kids) => h('div', { class: 'card' }, title ? h('h2', null, title) : null, ...kids);
 export const empty = (text) => h('p', { class: 'ital' }, text);
 export const badge = (text, cls = '') => h('span', { class: 'badge ' + cls }, text);
-export const stat = (label, value, sub) => h('div', { class: 'stat' }, h('span', { class: 'label' }, label), h('b', null, value), sub ? h('span', { class: 'mut', style: { fontSize: '12px' } }, sub) : null);
+export const stat = (label, value, sub, cls = '') => h('div', { class: 'stat' + (cls ? ' ' + cls : '') }, h('span', { class: 'label' }, label), h('b', null, value), sub ? h('span', { class: 'mut', style: { fontSize: '12px' } }, sub) : null);
 export function progress(label, frac, text, cls = '') {
   const f = Math.max(0, Math.min(1, frac || 0));
   return h('div', null, h('div', { class: 'row between' }, h('span', { class: 'label' }, label), h('span', { class: 'mut', style: { fontSize: '12px' } }, text)),
