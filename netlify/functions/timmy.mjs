@@ -64,7 +64,7 @@ const TOOLS = [
   { name: 'get_week_summary', description: "This week's numbers (Monday to Sunday).",
     input_schema: { type: 'object', properties: { week_start: str('Monday, YYYY-MM-DD. Defaults to this week.') } } },
   { name: 'get_tilt_status', description: "Today's tilt guard: trades used, losses in a row, daily limits, a win already banked, revenge emotions. Level is ok, warn or stop.", input_schema: { type: 'object', properties: {} } },
-  { name: 'get_my_rules', description: "The user's own rules from Settings: max risk per trade, daily max loss, max trades per day.", input_schema: { type: 'object', properties: {} } },
+  { name: 'get_my_rules', description: "The user's own day rules (Accounts & rules page): max risk per trade, daily max loss, max trades per day.", input_schema: { type: 'object', properties: {} } },
   { name: 'grade_setup', description: "Grade a setup against Timmy's checklist. Returns the grade, what is missing and the matching rule. It does not predict anything.",
     input_schema: { type: 'object', properties: {
       htf_left: bool('Looked left on the 4H and 1H'), htf_gap: bool('Delivering out of or reacting off an HTF gap'), rejection: bool('Rejection wick or rejected level'),
