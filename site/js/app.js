@@ -23,7 +23,7 @@ function render() {
   const page = PAGES[slug];
   document.title = page.title + ' · Dungeon Lab';
   const side = h('nav', { class: 'side' },
-    h('div', { class: 'brand' }, h('b', null, 'DUNGEON LAB'), h('span', { class: 'label' }, "Timmy's Dungeon")),
+    h('div', { class: 'brand' }, h('img', { src: '/brand-logo.png', alt: '' }), h('div', null, h('b', null, "Timmy's ", h('em', null, 'Dungeon')), h('span', { class: 'label' }, 'Dungeon Lab'))),
     h('div', { style: { marginTop: '20px' } }, NAV.map((s) => h('a', { class: 'item' + (s === slug ? ' on' : ''), href: '#/' + s, style: { padding: '10px', fontSize: '14px' } }, h('i'), PAGES[s].title))),
     h('div', { class: 'out' },
       h('div', { class: 'label', style: { padding: '0 10px 8px', textTransform: 'none', letterSpacing: 0 } }, S.mode === 'live' ? S.user.email : 'Preview mode'),
@@ -35,7 +35,8 @@ function render() {
     page.bare ? null : [h('h1', null, page.title), h('p', { class: 'desc' }, page.desc)], body,
     h('div', { class: 'foot' }, 'Dungeon Lab is a tracking tool. It does not give trade signals, predictions, or financial advice.')));
   const menu = h('button', { class: 'btn ghost sm menu', onclick: () => side.classList.toggle('open') }, 'Menu');
-  app.replaceChildren(h('div', { class: 'shell' }, menu, side, main));
+  const topbar = h('div', { class: 'topbar noprint' }, h('img', { src: '/brand-logo.png', alt: '' }), h('b', null, page.title), menu);
+  app.replaceChildren(h('div', { class: 'shell' }, topbar, side, main));
   try { page.render(body, { go, refresh: render }); } catch (e) { console.error(e); body.append(h('div', { class: 'banner' }, 'This page hit an error: ' + e.message)); }
   window.scrollTo(0, 0);
 }
@@ -77,7 +78,7 @@ function authScreen(linkError) {
         : [h('h2', null, 'Sign in'), h('p', { class: 'mut' }, "Type your email and we'll send you a link. New here? The same link creates your account."), f.el,
           h('div', { class: 'row between', style: { marginTop: '18px' } }, btn('Email me a sign-in link', sendLink), h('a', { href: '#', onclick: swap('password') }, 'Use a password'))];
     app.replaceChildren(h('div', { class: 'auth' },
-      h('div', { class: 'brand mb' }, h('h1', null, 'Dungeon Lab'), h('span', { class: 'label' }, "Timmy's Dungeon")),
+      h('div', { class: 'brand mb' }, h('img', { src: '/brand-logo.png', alt: '' }), h('div', null, h('b', null, "Timmy's ", h('em', null, 'Dungeon')), h('span', { class: 'label' }, 'Dungeon Lab'))),
       linkError ? h('div', { class: 'banner' }, `That link didn't work: ${linkError}. Request a new one below.`) : null,
       h('div', { class: 'card' }, ...body),
       h('p', { class: 'foot' }, 'Dungeon Lab is a tracking tool. It does not give trade signals, predictions, or financial advice.')));
@@ -89,7 +90,7 @@ function authScreen(linkError) {
 function codeScreen() {
   const f = form([{ key: 'code', label: 'Access code', span: 3 }]);
   app.replaceChildren(h('div', { class: 'auth' },
-    h('div', { class: 'brand mb' }, h('h1', null, 'Dungeon Lab'), h('span', { class: 'label' }, "Timmy's Dungeon")),
+    h('div', { class: 'brand mb' }, h('img', { src: '/brand-logo.png', alt: '' }), h('div', null, h('b', null, "Timmy's ", h('em', null, 'Dungeon')), h('span', { class: 'label' }, 'Dungeon Lab'))),
     h('div', { class: 'card' }, h('h2', null, 'Unlock your Lab'),
       h('p', { class: 'mut' }, 'Enter the access code your coach gave you on the call. You only do this once.'), f.el,
       h('div', { class: 'row between', style: { marginTop: '18px' } },
