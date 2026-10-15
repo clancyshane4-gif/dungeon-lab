@@ -67,7 +67,7 @@ export async function send(text, onUpdate) {
 export function renderAI(el, ctx) {
   if (!shown.length) shown.push({ who: 'ai', text: A.activeAccounts().length
     ? "Yo, welcome back to the Dungeon. I'm AI Timmy.\n\nTell me about a trade and I'll log it, run a setup through the checklist with me, or ask me anything about how I trade."
-    : "Yo, welcome to the Dungeon. I'm AI Timmy.\n\nFirst thing: set up your account in Settings so I can track your room. Then tell me about a trade, run a setup through the checklist with me, or ask me anything about how I trade." });
+    : "Yo, welcome to the Dungeon. I'm AI Timmy.\n\nFirst thing: set up your account in Accounts & rules so I can track your room. Then tell me about a trade, run a setup through the checklist with me, or ask me anything about how I trade." });
   const log = h('div', { class: 'chat' });
   const input = h('textarea', { rows: 2, placeholder: 'Short NQ 2 contracts, in 20150, stop 20180, out 20090. Clean IFG.' });
   let busy = false;
