@@ -38,7 +38,6 @@ function dashboard(el, ctx) {
     h('div', { class: 'row', style: { margin: '6px 0 22px' } }, h('span', { class: 'mut' }, new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }))));
 
   if (setupNeeded()) { el.append(setupCard(ctx)); if (!S.accounts.length) { el.append(installCard()); return; } }
-  el.append(installCard());
 
   const notes = [];
   const tilt = tiltStatus(day);
@@ -52,9 +51,9 @@ function dashboard(el, ctx) {
   el.append(h('div', { class: 'stats', style: { gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' } }, stat("Today's P&L", money(today.total_pnl)), stat('Weekly P&L', money(week.total_pnl)),
     stat('Win rate', all.win_rate == null ? '- -' : pct(all.win_rate)), stat('Current streak', days(st.cur))));
 
-  el.append(h('div', { class: 'card', style: { borderLeft: '2px solid var(--gold)' } }, h('h3', null, 'Insights'),
-    S.trades.length < 10 ? h('p', { class: 'mut', style: { margin: '8px 0 0' } }, `Log at least 10 trades to unlock insights. The Lab needs data to find your patterns. ${S.trades.length} of 10 logged.`)
-      : h('div', { class: 'dl', style: { marginTop: '12px' } }, [['Best session', all.best_session], ['Worst session', all.worst_session], ['Best model', all.best_model], ['Worst model', all.worst_model],
+  el.append(installCard());
+  if (S.trades.length >= 10) el.append(h('div', { class: 'card accent' }, h('h3', null, 'Insights'),
+      h('div', { class: 'dl', style: { marginTop: '12px' } }, [['Best session', all.best_session], ['Worst session', all.worst_session], ['Best model', all.best_model], ['Worst model', all.worst_model],
         ['Average R', num(all.avg_r)], ['Plan-follow rate', pct(all.plan_follow_rate)], ['A+ setups taken', all.a_plus_count]].map(([k, v]) => [h('span', { class: 'label' }, k), h('span', null, v ?? '-')]))));
 
   const hasRules = rules.max_trades_per_day != null || rules.daily_max_loss != null || rules.max_risk_per_trade != null;
@@ -67,9 +66,9 @@ function dashboard(el, ctx) {
       rules.max_trades_per_day != null ? line(`Max ${rules.max_trades_per_day} trades a day (${todays.length} today)`, todays.length <= rules.max_trades_per_day) : null,
       rules.daily_max_loss != null ? line(`Daily max loss ${money(rules.daily_max_loss)}`, today.total_pnl > -rules.daily_max_loss) : null,
       rules.max_risk_per_trade != null ? line(`Max risk ${money(rules.max_risk_per_trade)} a trade`, todays.every((t) => t.risk <= rules.max_risk_per_trade)) : null,
-    ] : [h('p', { class: 'mut', style: { margin: '8px 0 12px' } }, 'Set your rules in Settings to start tracking your discipline.'), btn('Set my rules', () => ctx.go('settings'), 'ghost sm')]),
+    ] : [h('p', { class: 'mut', style: { margin: '8px 0 12px' } }, 'Set your day rules in Accounts & rules to start tracking your discipline.'), btn('Set my rules', () => ctx.go('settings'), 'ghost sm')]),
     h('div', { class: 'card' + (first && first.danger_zone ? ' danger' : '') }, h('h3', null, 'Prop Account'), first ? [
-      h('p', { class: 'mut', style: { margin: '6px 0 12px' } }, first.name + (acts.length > 1 ? ` (+${acts.length - 1} more in Settings)` : '')),
+      h('p', { class: 'mut', style: { margin: '6px 0 12px' } }, first.name + (acts.length > 1 ? ` (+${acts.length - 1} more in Accounts & rules)` : '')),
       progress('Drawdown room', first.max_drawdown ? first.drawdown_room / first.max_drawdown : 0, money(first.drawdown_room), first.danger_zone ? 'red' : ''),
       progress('Profit target', first.profit_target_progress, first.profit_target ? `${money(first.profit)} of ${money(first.profit_target)}` : 'No target set', 'green'),
     ] : [h('p', { class: 'mut', style: { margin: '8px 0 12px' } }, 'Track drawdown and progress toward your profit target.'), btn('Set up your account', () => ctx.go('settings'))])));
@@ -86,5 +85,5 @@ function settings(el, ctx) {
 
 export default [
   { slug: 'dashboard', title: 'Dashboard', desc: '', render: dashboard, bare: true },
-  { slug: 'settings', title: 'Settings', desc: 'Your rules and your prop firm accounts. Everything else in the Lab reads from here.', render: settings },
+  { slug: 'settings', title: 'Accounts & rules', desc: 'Your prop firm accounts and your day rules. Everything else in the Lab reads from here.', render: settings },
 ];
