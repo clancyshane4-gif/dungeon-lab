@@ -35,8 +35,7 @@ function dashboard(el, ctx) {
   const days = (n) => n + (n === 1 ? ' day' : ' days');
 
   el.append(h('h1', null, 'Welcome back' + (name ? ', ' + name : '')),
-    h('div', { class: 'row', style: { margin: '8px 0 24px' } }, h('span', { class: 'mut' }, new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })),
-      badge(sess || 'Outside killzone', sess ? 'green' : '')));
+    h('div', { class: 'row', style: { margin: '6px 0 22px' } }, h('span', { class: 'mut' }, new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }))));
 
   if (setupNeeded()) { el.append(setupCard(ctx)); if (!S.accounts.length) { el.append(installCard()); return; } }
   el.append(installCard());
@@ -45,8 +44,8 @@ function dashboard(el, ctx) {
   const tilt = tiltStatus(day);
   notes.push(...tilt.stop, ...tilt.warn);
   if (tilt.level === 'stop') notes.unshift("You're done for today.");
-  el.append(h('div', { class: 'card' + (notes.length ? ' danger' : '') }, h('h3', null, "Today's Briefing"),
-    notes.length ? notes.map((n) => h('p', { class: 'red', style: { margin: '8px 0 0' } }, n))
+  el.append(h('div', { class: 'card ' + tilt.level }, h('div', { class: 'tilt ' + tilt.level }, h('div', null, h('p', { class: 'label', style: { margin: '0 0 2px' } }, "Today's briefing"), h('h2', null, tilt.level === 'stop' ? "You're done for today" : tilt.level === 'warn' ? 'Careful today' : 'Clear to trade')), badge(sess || 'Outside killzone', sess ? 'green' : '')),
+    notes.length ? notes.filter((n) => n !== "You're done for today.").map((n) => h('p', { class: tilt.stop.includes(n) ? 'red' : '', style: { margin: '8px 0 0' } }, n))
       : h('p', { class: 'mut', style: { margin: '8px 0 0' } }, !S.trades.length ? 'Your account is set up. Run the Pre-Trade Check before your first trade, then log it.' : 'Every account has room. Validate before you click.')));
 
   el.append(reviewQueue(ctx));
