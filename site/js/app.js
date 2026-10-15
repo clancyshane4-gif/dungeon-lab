@@ -1,5 +1,6 @@
 import { h, btn, guard, toast, form } from './ui.js';
 import * as db from './db.js';
+import * as T from './lib/trading.js';
 import core from './pages/core.js';
 import tools from './pages/tools.js';
 import simple from './pages/simple.js';
@@ -39,33 +40,48 @@ function render() {
   window.scrollTo(0, 0);
 }
 
-function authScreen() {
-  let mode = 'in';
+function authScreen(linkError) {
+  let mode = 'link'; // link | password | sent
+  let sentTo = '';
   const draw = () => {
-    const f = form([{ key: 'email', label: 'Email', type: 'email', span: 3 }, { key: 'password', label: 'Password', type: 'password', span: 3 }]);
-    const submit = guard(async () => {
+    const f = form(mode === 'password'
+      ? [{ key: 'email', label: 'Email', type: 'email', span: 3 }, { key: 'password', label: 'Password', type: 'password', span: 3 }]
+      : [{ key: 'email', label: 'Email', type: 'email', span: 3, placeholder: 'you@example.com' }]);
+    const sendLink = guard(async () => {
+      const { email } = f.get();
+      if (!email || !/.+@.+\..+/.test(email)) throw new Error('Enter your email address.');
+      await db.signInWithLink(email.trim());
+      sentTo = email.trim(); mode = 'sent'; draw();
+    });
+    const withPassword = guard(async () => {
       const { email, password } = f.get();
-      if (!email || !password) throw new Error('Enter your email and a password.');
-      if (mode === 'up') {
-        if (password.length < 8) throw new Error('Use at least 8 characters for the password.');
-        const signedIn = await db.signUp(email, password);
-        if (!signedIn) { toast('Check your email to confirm, then sign in.'); mode = 'in'; draw(); return; }
-      } else await db.signIn(email, password);
+      if (!email || !password) throw new Error('Enter your email and password.');
+      await db.signIn(email.trim(), password);
       await afterSignIn();
     });
-    f.inputs.password.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(e); });
+    const swap = (to) => (e) => { e.preventDefault(); mode = to; draw(); };
+    if (f.inputs.email) f.inputs.email.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') (mode === 'password' ? withPassword : sendLink)(e); });
+    if (f.inputs.password) f.inputs.password.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') withPassword(e); });
+    const body = mode === 'sent'
+      ? [h('h2', null, 'Check your email'), h('p', { class: 'mut' }, `We sent a sign-in link to ${sentTo}. Open it on this device and you're in. No password needed.`),
+        h('p', { style: { fontSize: '12px' } }, "Nothing there after a minute? Check spam, or ", h('a', { href: '#', onclick: swap('link') }, 'send it again'), '.')]
+      : mode === 'password'
+        ? [h('h2', null, 'Sign in with a password'), f.el,
+          h('div', { class: 'row between', style: { marginTop: '18px' } }, btn('Sign in', withPassword), h('a', { href: '#', onclick: swap('link') }, 'Email me a link instead')),
+          h('p', { style: { marginTop: '14px', fontSize: '12px' } }, h('a', { href: '#', onclick: guard(async (e) => {
+            e.preventDefault();
+            const { email } = f.get();
+            if (!email) throw new Error('Type your email first.');
+            await db.resetPassword(email.trim()); toast('Password reset email sent.');
+          }) }, 'Forgot password'))]
+        : [h('h2', null, 'Sign in'), h('p', { class: 'mut' }, "Type your email and we'll send you a link. New here? The same link creates your account."), f.el,
+          h('div', { class: 'row between', style: { marginTop: '18px' } }, btn('Email me a sign-in link', sendLink), h('a', { href: '#', onclick: swap('password') }, 'Use a password'))];
     app.replaceChildren(h('div', { class: 'auth' },
       h('div', { class: 'brand mb' }, h('h1', null, 'Dungeon Lab'), h('span', { class: 'label' }, "Timmy's Dungeon")),
-      h('div', { class: 'card' }, h('h2', null, mode === 'up' ? 'Create your account' : 'Sign in'), f.el,
-        h('div', { class: 'row between', style: { marginTop: '18px' } }, btn(mode === 'up' ? 'Create account' : 'Sign in', submit),
-          h('a', { href: '#', onclick: (e) => { e.preventDefault(); mode = mode === 'up' ? 'in' : 'up'; draw(); } }, mode === 'up' ? 'I already have an account' : 'Create an account')),
-        mode === 'in' ? h('p', { style: { marginTop: '14px', fontSize: '12px' } }, h('a', { href: '#', onclick: guard(async (e) => {
-          e.preventDefault();
-          const { email } = f.get();
-          if (!email) throw new Error('Type your email first.');
-          await db.resetPassword(email); toast('Password reset email sent.');
-        }) }, 'Forgot password')) : null),
+      linkError ? h('div', { class: 'banner' }, `That link didn't work: ${linkError}. Request a new one below.`) : null,
+      h('div', { class: 'card' }, ...body),
       h('p', { class: 'foot' }, 'Dungeon Lab is a tracking tool. It does not give trade signals, predictions, or financial advice.')));
+    linkError = null;
   };
   draw();
 }
@@ -86,8 +102,11 @@ function codeScreen() {
         h('a', { href: '#', onclick: (e) => { e.preventDefault(); db.signOut(); } }, 'Sign out')))));
 }
 
+// During the New York session a phone opens straight to the Pre-Trade Check. Any other time, the Dashboard.
+const inSession = () => { const p = T.nyParts(); return T.dow(p.date) % 6 !== 0 && p.minutes >= 9 * 60 && p.minutes < 16 * 60; };
 async function enter() {
   await db.loadAll();
+  if (!location.hash && inSession() && S.accounts.length) location.hash = '#/pre-trade';
   window.addEventListener('hashchange', render);
   render();
 }
@@ -100,7 +119,8 @@ async function afterSignIn() {
 (async () => {
   try {
     await db.init();
-    if (!S.user) return authScreen();
+    const linkError = S.mode === 'live' ? db.finishLinkLogin() : null;
+    if (!S.user) return authScreen(linkError);
     await afterSignIn();
   } catch (e) {
     console.error(e);
