@@ -8,6 +8,7 @@ import timmy from './pages/timmy.js';
 import routine from './pages/routine.js';
 import reference from './pages/reference.js';
 import toolPages from './pages/tools.js';
+import { avatar, displayName } from './pages/profile.js';
 
 const { S } = db;
 // Six items in the sidebar. The setup grader lives inside the Pre-Trade Check. Everything else worth keeping sits behind "Tools".
@@ -33,7 +34,7 @@ function render() {
     h('div', { class: 'brand' }, h('img', { src: '/brand-logo.png', alt: '' }), h('div', null, h('b', null, "Timmy's ", h('em', null, 'Dungeon')), h('span', { class: 'label' }, 'Dungeon Lab'))),
     h('div', { style: { marginTop: '20px' } }, NAV.map((s) => h('a', { class: 'item' + (s === slug || s === page.parent ? ' on' : ''), href: '#/' + s, style: { padding: '10px', fontSize: '14px' } }, h('i'), PAGES[s].title))),
     h('div', { class: 'out' },
-      h('div', { class: 'label', style: { padding: '0 10px 8px', textTransform: 'none', letterSpacing: 0 } }, S.mode === 'live' ? S.user.email : 'Preview mode'),
+      h('a', { class: 'who', href: '#/settings', title: 'Edit your profile' }, avatar(30), h('span', null, h('b', null, displayName()), h('span', { class: 'label' }, S.mode === 'live' ? S.user.email : 'Preview mode'))),
       S.mode === 'live' ? h('a', { class: 'item', href: '#', onclick: (e) => { e.preventDefault(); db.signOut(); } }, h('i'), 'Sign out') : null));
   const body = h('div');
   const main = h('main', { class: 'main' }, h('div', { class: 'col' },
