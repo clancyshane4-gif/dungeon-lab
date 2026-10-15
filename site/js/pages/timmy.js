@@ -76,7 +76,7 @@ function doValidate(text) {
 
 function accountsText() {
   const list = A.getAccountStatus('all');
-  if (!list.length) return 'No accounts yet, bro. Set one up in Settings and I can track the room.';
+  if (!list.length) return 'No accounts yet, bro. Set one up in Accounts & rules and I can track the room.';
   return list.map((a) => `${a.name} (${a.stage}): balance ${money(a.current_balance)}. ${room(a)}${a.danger_zone ? ' Danger zone.' : ''}${a.daily_limit_hit ? ' Daily limit hit, done for the day.' : ''}${a.consistency_flag ? ' Consistency flag.' : ''}`).join('\n');
 }
 function statsText(days) {
@@ -113,7 +113,7 @@ export async function reply(text) {
 
 function render(el, ctx) {
   if (S.profile && S.profile.ai_access) return renderAI(el, ctx);
-  if (!shown.length) shown.push({ who: 'ai', text: `Yo, welcome to the Dungeon. I'm Timmy's shortcut desk.\n\n${A.activeAccounts().length ? 'Tell me what you took and I will log it.' : 'First thing: set up your account in Settings so I have something to track.'}\n\n${HELP}` });
+  if (!shown.length) shown.push({ who: 'ai', text: `Yo, welcome to the Dungeon. I'm Timmy's shortcut desk.\n\n${A.activeAccounts().length ? 'Tell me what you took and I will log it.' : 'First thing: set up your account in Accounts & rules so I have something to track.'}\n\n${HELP}` });
   const log = h('div', { class: 'chat' });
   const input = h('textarea', { rows: 2, placeholder: 'log short NQ 2 in 20150 stop 20180 out 20090' });
   const draw = () => { log.replaceChildren(...shown.map((m) => h('div', { class: 'msg ' + m.who }, m.text))); log.lastElementChild?.scrollIntoView({ block: 'nearest' }); };
