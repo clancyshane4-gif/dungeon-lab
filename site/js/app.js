@@ -93,7 +93,7 @@ function authScreen(linkError) {
             if (!email) throw new Error('Type your email first.');
             await db.resetPassword(email.trim()); toast('Password reset email sent.');
           }) }, 'Forgot password'))]
-        : [h('h2', null, 'Sign in'), h('p', { class: 'mut' }, "Type your email and we'll send you a 6-digit code. New here? The same code creates your account."), f.el,
+        : [h('h2', null, 'Sign in'), h('p', { class: 'mut' }, "Type the email you bought with on Whop and we'll send you a 6-digit code. No password needed."), f.el,
           h('div', { class: 'row between', style: { marginTop: '18px' } }, btn('Email me a code', sendLink), h('a', { href: '#', onclick: swap('password') }, 'Use a password'))];
     app.replaceChildren(h('div', { class: 'auth' },
       h('div', { class: 'brand mb' }, h('img', { src: '/brand-logo.png', alt: '' }), h('div', null, h('b', null, "Timmy's ", h('em', null, 'Dungeon')), h('span', { class: 'label' }, 'Dungeon Lab'))),
