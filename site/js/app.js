@@ -2,18 +2,16 @@ import { h, btn, guard, toast, form } from './ui.js';
 import * as db from './db.js';
 import * as T from './lib/trading.js';
 import core from './pages/core.js';
-import tools from './pages/tools.js';
 import simple from './pages/simple.js';
 import guardPages from './pages/guard.js';
 import timmy from './pages/timmy.js';
 
 const { S } = db;
-// The simple layout: six pages. The other tools are still in the code and can be switched back on here.
+// Five pages. The setup grader lives inside the Pre-Trade Check; the other tools are still in the code and can be switched back on here.
 const pick = (list, slug, title) => ({ ...list.find((p) => p.slug === slug), title });
-const PAGES = Object.fromEntries([simple[0], timmy[0], pick(tools, 'validator', 'Trade Validator'), pick(core, 'journal', 'Trading Journal'),
-  guardPages[0], simple[1]].map((p) => [p.slug, p]));
+const PAGES = Object.fromEntries([simple[0], timmy[0], pick(core, 'journal', 'Trading Journal'), guardPages[0], simple[1]].map((p) => [p.slug, p]));
 const NAV = Object.keys(PAGES);
-const ALIAS = { 'risk-calc': 'pre-trade', tracker: 'settings', plan: 'settings', today: 'dashboard', lessons: 'journal' };
+const ALIAS = { 'risk-calc': 'pre-trade', validator: 'pre-trade', checklist: 'pre-trade', tracker: 'settings', plan: 'settings', today: 'dashboard', lessons: 'journal' };
 const app = document.getElementById('app');
 const slugNow = () => { const s = location.hash.slice(2); const a = ALIAS[s] || s; return PAGES[a] ? a : 'dashboard'; };
 const go = (slug) => { slug = ALIAS[slug] || slug; if (slugNow() === slug) render(); else location.hash = '#/' + slug; };
@@ -31,7 +29,6 @@ function render() {
   const body = h('div');
   const main = h('main', { class: 'main' }, h('div', { class: 'col' },
     S.mode !== 'live' ? h('div', { class: 'banner info noprint' }, 'Preview mode. Nothing is connected yet, so data saves in this browser only.') : null,
-    h('div', { class: 'row noprint', style: { justifyContent: 'flex-end', marginBottom: '8px' } }, btn('Validate', () => go('validator'), 'sm'), btn('Pre-Trade Check', () => go('pre-trade'), 'ghost sm')),
     page.bare ? null : [h('h1', null, page.title), h('p', { class: 'desc' }, page.desc)], body,
     h('div', { class: 'foot' }, 'Dungeon Lab is a tracking tool. It does not give trade signals, predictions, or financial advice.')));
   const menu = h('button', { class: 'btn ghost sm menu', onclick: () => side.classList.toggle('open') }, 'Menu');
