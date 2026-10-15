@@ -8,6 +8,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
+    # Allow the Lab to be shown inside Whop's member area (Website embed app) and nowhere else.
+    Content-Security-Policy = "frame-ancestors 'self' https://whop.com https://*.whop.com"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
