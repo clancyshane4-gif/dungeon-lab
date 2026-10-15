@@ -1,6 +1,8 @@
 [build]
   publish = "site"
   functions = "netlify/functions"
+  # The logo comes from the main site so the Lab always matches it. If the download fails the build still goes through.
+  command = "curl -fsSL -o site/brand-logo.png 'https://timmysdungeon.com/favicon.png?v=td5' || true"
 
 [functions]
   node_bundler = "esbuild"
