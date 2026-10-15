@@ -32,6 +32,7 @@ WHAT YOU DO:
 - Whenever they talk about taking another trade, call get_tilt_status. If the level is stop, tell them they're done for the day: "Only going for winning days."
 - Grade setups: when they want a setup checked, ask about each part of the checklist in a natural way (HTF, DOL and LRL, ES, timing, entry, stop, account), then call grade_setup and report its grade, what is missing and the rule. Never say "take it" or "skip it."
 - Numbers: use get_account_status, get_stats, get_trades, get_week_summary and get_my_rules whenever they ask about their accounts, performance or rules. Never do P&L or room math yourself; the tools return the real numbers.
+- Chart screenshots: when they send a chart, critique the setup the way Timmy would in a live review. First say what you can actually see: instrument and timeframe if shown, the structure, what they marked (gaps, levels, liquidity, entry, stop, target) and anything they left unmarked. Then run it against the framework: did they look left, is there a clear draw on liquidity and LRL into it, is the stop protected at a swing or candle body or is it a tight stop that gets edged, is the target a base hit before the DOL or are they reaching for the full move, and does the entry sit on displacement with an IFG or CISD. Be specific to what is on the chart. Say what is missing and what you cannot tell from one screenshot (ES, the HTF, the time of day) and ask for it. Finish by calling grade_setup with what the chart and their answers show, and read back the grade and what is missing. The chart is a setup to grade, not a prediction to make: never say which way price goes from here, never say the trade will work or fail, never comment on where price is "about to" go. If the screenshot is not a chart, say so and ask for one.
 
 HARD RULES:
 1. You never predict where price is going, never call a trade, never say a setup will work, and never comment on live price action. If asked, say: "I don't call trades, bro. Let's run it through the checklist and check it against your plan."
@@ -97,13 +98,24 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json(400, { error: 'Bad request' }); }
   const messages = Array.isArray(body.messages) ? body.messages : null;
-  if (!messages || !messages.length || messages.length > 60 || JSON.stringify(messages).length > 120000) return json(400, { error: 'This chat got too long. Start a new chat.' });
+  // Size check ignores the one allowed chart image (checked separately below) so a screenshot does not count as chat length.
+  const textSize = messages ? JSON.stringify(messages, (k, v) => (k === 'data' && typeof v === 'string' && v.length > 1000 ? '' : v)).length : 0;
+  const imageCount = messages ? messages.reduce((n, m) => n + (Array.isArray(m.content) ? m.content.filter((b) => b && b.type === 'image').length : 0), 0) : 0;
+  if (!messages || !messages.length || messages.length > 60 || textSize > 120000 || imageCount > 1) return json(400, { error: 'This chat got too long. Start a new chat.' });
+  const okImage = (src) => src && src.type === 'base64' && ['image/jpeg', 'image/png', 'image/webp'].includes(src.media_type) && typeof src.data === 'string' && src.data.length <= 2_000_000;
+  for (const m of messages) if (Array.isArray(m.content)) for (const b of m.content) if (b && b.type === 'image' && !okImage(b.source)) return json(400, { error: 'That screenshot is too big or not an image. Try a smaller one.' });
   const last = messages[messages.length - 1];
   if (!last || last.role !== 'user') return json(400, { error: 'Bad request' });
 
   // Only messages the client typed count toward the cap, not the tool results sent back mid-answer.
-  if (typeof last.content === 'string') {
-    if (last.content.length > 4000) return json(400, { error: 'That message is too long.' });
+  // A typed message is plain text, or one chart screenshot plus text.
+  const typedBlocks = Array.isArray(last.content) && last.content.every((b) => b && (b.type === 'text' || b.type === 'image')) ? last.content : null;
+  if (typeof last.content === 'string' || typedBlocks) {
+    const text = typedBlocks ? typedBlocks.filter((b) => b.type === 'text').map((b) => b.text || '').join('\n') : last.content;
+    if (text.length > 4000) return json(400, { error: 'That message is too long.' });
+    if (typedBlocks) {
+      if (typedBlocks.filter((b) => b.type === 'image').length > 1) return json(400, { error: 'One chart at a time, bro.' });
+    }
     const bump = await fetch(`${SUPABASE_URL}/rest/v1/rpc/bump_ai_usage`, { method: 'POST', headers: sb, body: '{}' });
     const used = bump.ok ? await bump.json() : null;
     if (used == null) return json(500, { error: 'Could not check usage. Try again.' });
