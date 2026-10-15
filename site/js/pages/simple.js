@@ -3,7 +3,9 @@ import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
 import accounts from './accounts.js';
-import { tiltStatus } from './guard.js';
+import { tiltStatus, reviewQueue } from './guard.js';
+import { setupCard, setupNeeded } from './setup.js';
+import { installCard } from './install.js';
 
 const { S } = db;
 const tracker = accounts.find((p) => p.slug === 'tracker').render;
@@ -36,14 +38,18 @@ function dashboard(el, ctx) {
     h('div', { class: 'row', style: { margin: '8px 0 24px' } }, h('span', { class: 'mut' }, new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })),
       badge(sess || 'Outside killzone', sess ? 'green' : '')));
 
+  if (setupNeeded()) { el.append(setupCard(ctx)); if (!S.accounts.length) { el.append(installCard()); return; } }
+  el.append(installCard());
+
   const notes = [];
   const tilt = tiltStatus(day);
   notes.push(...tilt.stop, ...tilt.warn);
   if (tilt.level === 'stop') notes.unshift("You're done for today.");
   el.append(h('div', { class: 'card' + (notes.length ? ' danger' : '') }, h('h3', null, "Today's Briefing"),
     notes.length ? notes.map((n) => h('p', { class: 'red', style: { margin: '8px 0 0' } }, n))
-      : h('p', { class: 'mut', style: { margin: '8px 0 0' } }, !S.accounts.length ? 'Welcome to Dungeon Lab. Start by setting up your account in Settings.' : !S.trades.length ? 'Your account is set up. Validate your first setup, then log the trade.' : 'Every account has room. Validate before you click.')));
+      : h('p', { class: 'mut', style: { margin: '8px 0 0' } }, !S.trades.length ? 'Your account is set up. Run the Pre-Trade Check before your first trade, then log it.' : 'Every account has room. Validate before you click.')));
 
+  el.append(reviewQueue(ctx));
   el.append(h('div', { class: 'stats', style: { gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' } }, stat("Today's P&L", money(today.total_pnl)), stat('Weekly P&L', money(week.total_pnl)),
     stat('Win rate', all.win_rate == null ? '- -' : pct(all.win_rate)), stat('Current streak', days(st.cur))));
 
