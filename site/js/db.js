@@ -45,10 +45,11 @@ export async function signUp(email, password) {
   S.user = data.user;
   return true;
 }
-// Magic link: no password. Supabase emails a link; clicking it lands back here signed in (the user is created if new).
+// Email a sign-in code (and a link). Accounts are created by the Whop webhook when someone buys, never from here,
+// so an email that is not on the member list gets nothing.
 export async function signInWithLink(email) {
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/', shouldCreateUser: true } });
-  if (error) throw new Error(error.message);
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/', shouldCreateUser: false } });
+  if (error) throw new Error(/signup|sign up|not allowed|not found/i.test(error.message) ? "That email isn't on the member list. Use the email you bought with on Whop, or message support in Whop." : error.message);
 }
 // The same email carries a 6-digit code. Typing it here signs this browser in, so it works on a phone, inside Whop, anywhere.
 export async function signInWithCode(email, code) {
