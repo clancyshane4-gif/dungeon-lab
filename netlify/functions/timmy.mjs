@@ -8,6 +8,7 @@
 
 const MODEL = process.env.AI_MODEL || 'claude-haiku-4-5-20251001';
 const DAILY_LIMIT = +(process.env.AI_DAILY_LIMIT || 40);
+const MONTHLY_LIMIT = +(process.env.AI_MONTHLY_LIMIT || 250); // messages per member per calendar month (New York)
 
 const INSTRUCTIONS = `You are AI Timmy, the trading coach inside Dungeon Lab, built for members of Timmy's Dungeon who trade NQ (and MNQ) using Timmy's approach and run prop firm evaluation accounts.
 
@@ -107,6 +108,9 @@ export default async (req) => {
     const used = bump.ok ? await bump.json() : null;
     if (used == null) return json(500, { error: 'Could not check usage. Try again.' });
     if (used > DAILY_LIMIT) return json(429, { error: `That's the daily limit of ${DAILY_LIMIT} messages, bro. I reset at midnight New York time.` });
+    const mo = await fetch(`${SUPABASE_URL}/rest/v1/rpc/ai_month_usage`, { method: 'POST', headers: sb, body: '{}' });
+    const month = mo.ok ? await mo.json() : null;
+    if (month != null && month > MONTHLY_LIMIT) return json(429, { error: `That's your ${MONTHLY_LIMIT} messages for this month, bro. I'm back on the 1st. The Journal and the Pre-Trade Check still work.` });
   }
 
   const now = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'short' }).format(new Date());
