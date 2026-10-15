@@ -45,6 +45,19 @@ export async function signUp(email, password) {
   S.user = data.user;
   return true;
 }
+// Magic link: no password. Supabase emails a link; clicking it lands back here signed in (the user is created if new).
+export async function signInWithLink(email) {
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/', shouldCreateUser: true } });
+  if (error) throw new Error(error.message);
+}
+// After a magic link or reset link, the URL carries tokens or an error. Read any error, then clean the address bar.
+export function finishLinkLogin() {
+  const hash = new URLSearchParams(location.hash.replace(/^#\/?/, ''));
+  const q = new URLSearchParams(location.search);
+  const err = hash.get('error_description') || q.get('error_description') || hash.get('error') || q.get('error');
+  if (hash.has('access_token') || hash.has('error') || q.has('code') || q.has('error')) history.replaceState(null, '', location.pathname);
+  return err ? err.replace(/\+/g, ' ') : null;
+}
 export async function resetPassword(email) {
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
   if (error) throw new Error(error.message);
