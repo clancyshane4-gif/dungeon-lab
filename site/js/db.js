@@ -50,6 +50,12 @@ export async function signInWithLink(email) {
   const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + '/', shouldCreateUser: true } });
   if (error) throw new Error(error.message);
 }
+// The same email carries a 6-digit code. Typing it here signs this browser in, so it works on a phone, inside Whop, anywhere.
+export async function signInWithCode(email, code) {
+  const { data, error } = await sb.auth.verifyOtp({ email, token: code, type: 'email' });
+  if (error) throw new Error(/expired|invalid/i.test(error.message) ? 'That code is wrong or has expired. Request a new one.' : error.message);
+  S.user = data.user;
+}
 // After a magic link or reset link, the URL carries tokens or an error. Read any error, then clean the address bar.
 export function finishLinkLogin() {
   const hash = new URLSearchParams(location.hash.replace(/^#\/?/, ''));
