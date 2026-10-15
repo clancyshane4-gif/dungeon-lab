@@ -116,7 +116,7 @@ export default async (req) => {
   const now = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'short' }).format(new Date());
   const ai = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', ...(process.env.ANTHROPIC_WORKSPACE_ID ? { 'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID } : {}) },
     body: JSON.stringify({
       model: MODEL, max_tokens: 900,
       system: [{ type: 'text', text: INSTRUCTIONS, cache_control: { type: 'ephemeral' } }, { type: 'text', text: `It is ${now} in New York.` }],
