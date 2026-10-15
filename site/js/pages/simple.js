@@ -6,6 +6,7 @@ import accounts from './accounts.js';
 import { tiltStatus, reviewQueue } from './guard.js';
 import { setupCard, setupNeeded } from './setup.js';
 import { installCard } from './install.js';
+import { profileCard, displayName } from './profile.js';
 
 const { S } = db;
 const tracker = accounts.find((p) => p.slug === 'tracker').render;
@@ -25,7 +26,7 @@ function streaks(day) {
 
 function dashboard(el, ctx) {
   const p = T.nyParts(), day = p.date, sess = T.sessionAt(p.minutes);
-  const name = S.mode === 'live' ? (S.user.email || '').split('@')[0] : '';
+  const name = displayName();
   const acts = A.activeAccounts().map((a) => A.statusOf(a));
   const today = T.stats(A.tradesIn({ date_from: day, date_to: day }));
   const week = T.stats(A.tradesIn({ date_from: T.weekStart(day), date_to: day }));
@@ -34,7 +35,7 @@ function dashboard(el, ctx) {
   const rules = db.doc('trading_plan', {}) || {};
   const days = (n) => n + (n === 1 ? ' day' : ' days');
 
-  el.append(h('h1', null, 'Welcome back' + (name ? ', ' + name : '')),
+  el.append(h('h1', null, 'Welcome back' + (name && name !== 'Preview' ? ', ' + name : '')),
     h('div', { class: 'row', style: { margin: '6px 0 22px' } }, h('span', { class: 'mut' }, new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }))));
 
   if (setupNeeded()) { el.append(setupCard(ctx)); if (!S.accounts.length) { el.append(installCard()); return; } }
@@ -75,6 +76,7 @@ function dashboard(el, ctx) {
 }
 
 function settings(el, ctx) {
+  el.append(profileCard(ctx));
   const cur = db.doc('trading_plan', {}) || {};
   const f = form([{ key: 'max_risk_per_trade', label: 'Max risk per trade ($)', type: 'number' }, { key: 'daily_max_loss', label: 'Daily max loss ($)', type: 'number' }, { key: 'max_trades_per_day', label: 'Max trades per day', type: 'number' }, { key: 'max_losses_in_row', label: 'Done after this many losses in a row', type: 'number' }, { key: 'stop_after_win', label: 'Stop for the day after a win?', type: 'yesno' }], { max_trades_per_day: 3, max_losses_in_row: 2, stop_after_win: true, ...cur });
   el.append(card('My rules', h('p', { class: 'mut' }, "Your Dashboard, Pre-Trade Check and Timmy use these. Timmy's own defaults: 3 trades max, off after a win, off after 2 losses in a row."), f.el,
