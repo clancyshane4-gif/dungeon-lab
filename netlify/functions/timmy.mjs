@@ -126,12 +126,13 @@ export default async (req) => {
   }
 
   const now = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'short' }).format(new Date());
+  const name = typeof body.name === 'string' ? body.name.replace(/[^\w .'-]/g, '').trim().slice(0, 40) : '';
   const ai = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', ...(process.env.ANTHROPIC_WORKSPACE_ID ? { 'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID } : {}) },
     body: JSON.stringify({
       model: MODEL, max_tokens: 900,
-      system: [{ type: 'text', text: INSTRUCTIONS, cache_control: { type: 'ephemeral' } }, { type: 'text', text: `It is ${now} in New York.` }],
+      system: [{ type: 'text', text: INSTRUCTIONS, cache_control: { type: 'ephemeral' } }, { type: 'text', text: `It is ${now} in New York.${name ? ` The member goes by ${name}; use it now and then, not every message.` : ''}` }],
       tools: TOOLS, messages,
     }),
   });
