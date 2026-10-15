@@ -31,16 +31,41 @@ async function ask() {
   if (!res.ok) throw new Error(data.error || 'AI Timmy is unavailable right now.');
   return data;
 }
+// A "typed" turn is what the member sent (text, or a chart screenshot plus text); tool results are not.
+const typed = (m) => m.role === 'user' && (typeof m.content === 'string' || m.content.every((b) => b.type !== 'tool_result'));
 function trim() {
   while (history.length > 40) {
     history.shift();
-    while (history.length && !(history[0].role === 'user' && typeof history[0].content === 'string')) history.shift();
+    while (history.length && !typed(history[0])) history.shift();
   }
 }
 
-export async function send(text, onUpdate) {
-  history.push({ role: 'user', content: text });
-  shown.push({ who: 'me', text }); onUpdate(); trim();
+// Shrink a chart screenshot in the browser so it uploads fast and costs little: longest side 1400px, JPEG.
+export function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const k = Math.min(1, 1400 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL('image/jpeg', 0.82);
+      resolve({ media_type: 'image/jpeg', data: dataUrl.split(',')[1], dataUrl });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file is not an image. Drop in a screenshot of your chart.')); };
+    img.src = url;
+  });
+}
+
+export async function send(text, onUpdate, image) {
+  if (image) {
+    // Only the newest chart travels with the chat; older ones are replaced by a note so the request stays small.
+    for (const m of history) if (typed(m) && Array.isArray(m.content)) m.content = m.content.map((b) => b.type === 'image' ? { type: 'text', text: '[chart screenshot sent earlier]' } : b);
+    history.push({ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: image.media_type, data: image.data } }, { type: 'text', text }] });
+  } else history.push({ role: 'user', content: text });
+  shown.push({ who: 'me', text, img: image ? image.dataUrl : null }); onUpdate(); trim();
   try {
     for (let step = 0; step < 8; step++) {
       const out = await ask();
@@ -70,20 +95,42 @@ export function renderAI(el, ctx) {
     : "Yo, welcome to the Dungeon. I'm AI Timmy.\n\nFirst thing: set up your account in Accounts & rules so I can track your room. Then tell me about a trade, run a setup through the checklist with me, or ask me anything about how I trade." });
   const log = h('div', { class: 'chat' });
   const input = h('textarea', { rows: 2, placeholder: 'Short NQ 2 contracts, in 20150, stop 20180, out 20090. Clean IFG.' });
-  let busy = false;
-  const draw = () => { log.replaceChildren(...shown.map((m) => h('div', { class: 'msg ' + m.who }, m.text)), busy ? h('div', { class: 'msg sys' }, 'Timmy is thinking') : ''); log.lastElementChild?.scrollIntoView({ block: 'nearest' }); };
+  let busy = false, pending = null;
+  const draw = () => {
+    log.replaceChildren(...shown.map((m) => h('div', { class: 'msg ' + m.who }, m.img ? h('img', { class: 'chart-thumb', src: m.img, alt: 'Chart screenshot' }) : null, m.text)), busy ? h('div', { class: 'msg sys' }, 'Timmy is thinking') : '');
+    log.lastElementChild?.scrollIntoView({ block: 'nearest' });
+  };
   const go = async (text) => {
     text = (text || '').trim();
-    if (!text || busy) return;
+    if (busy) return;
+    if (!text && !pending) return;
+    if (!text) text = 'Here is my setup. Critique it.';
+    const image = pending; pending = null; drawPending();
     busy = true; input.value = '';
-    await send(text, draw);
+    await send(text, draw, image);
     busy = false; draw();
   };
+  // Chart screenshot picker. The image is shrunk in the browser; nothing is stored, it only goes to Timmy with this message.
+  const file = h('input', { type: 'file', accept: 'image/*', style: { display: 'none' } });
+  const preview = h('div', { class: 'row', style: { marginBottom: '8px' } });
+  const drawPending = () => preview.replaceChildren(pending ? [h('img', { class: 'chart-thumb', src: pending.dataUrl, alt: 'Chart to send' }), h('span', { class: 'mut', style: { fontSize: '12.5px' } }, 'Chart attached. Say what you see, or just hit Send.'), btn('Remove', () => { pending = null; drawPending(); }, 'ghost sm')] : []);
+  file.addEventListener('change', async () => {
+    const f = file.files[0]; file.value = '';
+    if (!f) return;
+    try { pending = await shrinkImage(f); } catch (e) { shown.push({ who: 'sys', text: e.message }); draw(); return; }
+    drawPending(); input.focus();
+  });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(input.value); } });
+  input.addEventListener('paste', async (e) => {
+    const it = [...(e.clipboardData?.items || [])].find((x) => x.type.startsWith('image/'));
+    if (!it) return;
+    e.preventDefault();
+    try { pending = await shrinkImage(it.getAsFile()); drawPending(); } catch (err) { shown.push({ who: 'sys', text: err.message }); draw(); }
+  });
   el.append(h('div', { class: 'card' }, log,
-    h('div', { class: 'row', style: { marginBottom: '10px' } }, [['Check my accounts', 'How are my accounts looking?'], ['My stats', 'How have my last 30 days gone?'], ['Grade a setup', 'I want to run a setup through the checklist.'], ['Review today', "Let's review today."]].map(([l, t]) => btn(l, () => go(t), 'ghost sm'))),
-    input,
-    h('div', { class: 'row between', style: { marginTop: '10px' } }, btn('Send', () => go(input.value)), btn('New chat', () => { history = []; shown = []; ctx.refresh(); }, 'ghost sm'))),
-    h('p', { class: 'ital' }, 'AI Timmy coaches, logs and reads your own numbers back. He does not call trades, predict price, or give financial advice.'));
+    h('div', { class: 'row', style: { marginBottom: '10px' } }, [['Check my accounts', 'How are my accounts looking?'], ['My stats', 'How have my last 30 days gone?'], ['Grade a setup', 'I want to run a setup through the checklist.'], ['Review today', "Let's review today."]].map(([l, t]) => btn(l, () => go(t), 'ghost sm')), btn('Critique my chart', () => file.click(), 'ghost sm')),
+    preview, file, input,
+    h('div', { class: 'row between', style: { marginTop: '10px' } }, h('div', { class: 'row' }, btn('Send', () => go(input.value)), btn('Add chart', () => file.click(), 'ghost')), btn('New chat', () => { history = []; shown = []; ctx.refresh(); }, 'ghost sm'))),
+    h('p', { class: 'ital' }, 'AI Timmy coaches, logs, critiques your chart screenshots and reads your own numbers back. He does not call trades, predict price, or give financial advice. Screenshots are not stored.'));
   draw();
 }
