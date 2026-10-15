@@ -45,12 +45,15 @@ export function tiltStatus(day = T.today()) {
 }
 
 export function tiltCard(t = tiltStatus()) {
-  if (t.level === 'ok') return h('div', { class: 'card', style: { borderColor: 'var(--green)' } }, h('div', { class: 'row between' }, h('h3', null, 'Tilt guard'), badge('Clear to trade', 'green')),
-    h('p', { class: 'mut', style: { margin: '8px 0 0' } }, `${t.trades} of ${t.rules.max_trades_per_day ?? 'unlimited'} trades used today.`));
-  return h('div', { class: 'card' + (t.level === 'stop' ? ' danger' : ''), style: t.level === 'warn' ? { borderColor: 'var(--gold)' } : null },
-    h('div', { class: 'row between' }, h('h3', null, t.level === 'stop' ? "You're done for today" : 'Careful'), badge(t.level === 'stop' ? 'Stop' : 'Warning', t.level === 'stop' ? 'red' : 'gold')),
+  const lvl = t.level;
+  const title = lvl === 'ok' ? 'Clear to trade' : lvl === 'warn' ? 'Careful' : "You're done for today";
+  const sub = lvl === 'ok' ? `${t.trades} of ${t.rules.max_trades_per_day ?? 'unlimited'} trades used today.` : null;
+  return h('div', { class: 'card ' + lvl },
+    h('div', { class: 'tilt ' + lvl }, h('div', null, h('p', { class: 'label', style: { margin: '0 0 2px' } }, 'Tilt guard'), h('h2', null, title)),
+      badge(lvl === 'ok' ? 'Go' : lvl === 'warn' ? 'Warning' : 'Stop', lvl === 'ok' ? 'green' : lvl === 'warn' ? 'gold' : 'red')),
+    sub ? h('p', { class: 'mut', style: { margin: '8px 0 0' } }, sub) : null,
     [...t.stop, ...t.warn].map((x) => h('p', { class: t.stop.includes(x) ? 'red' : '', style: { margin: '8px 0 0' } }, x)),
-    t.level === 'stop' ? h('p', { class: 'ital', style: { marginTop: '10px' } }, 'Only going for winning days. The account is still here tomorrow.') : null);
+    lvl === 'stop' ? h('p', { class: 'ital', style: { marginTop: '10px' } }, 'Only going for winning days. The account is still here tomorrow.') : null);
 }
 
 // How much more profit fits under the consistency rule today (best day must stay at or under pct% of total profit).
@@ -109,7 +112,7 @@ function preTrade(el, ctx) {
     if (pts > 60 && v.instrument.includes('NQ')) flags.push(`That's a ${num(pts, 0)} point stop. Big stops are fine when they're protected, just size down for it.`);
     const cons = s ? consistencyRoom(s) : null;
     out.replaceChildren(
-      h('div', { class: 'stats' }, stat('Size', `${n} ${v.instrument}`, n ? alt : ''), stat('Dollar risk', money(dollars), `${num(pts)} points`), stat('Risk budget', money(budget), v.risk ? 'Your number' : 'Half of your room'),
+      h('div', { class: 'stats' }, stat('Size for this trade', `${n} ${v.instrument}`, n ? alt : 'Too big for one contract', 'hero'), stat('Dollar risk', money(dollars), `${num(pts)} points`), stat('Risk budget', money(budget), v.risk ? 'Your number' : 'Half of your room'),
         rr != null ? stat('Reward to risk', num(rr) + 'R', rr < 1 ? 'Under 1R' : '') : null,
         s ? stat('Room after a full stop', money(Math.min(s.daily_loss_room ?? Infinity, s.drawdown_room ?? Infinity) - dollars), s.name) : null),
       flags.length ? h('div', { class: 'card danger' }, flags.map((x) => h('p', { class: 'red', style: { margin: '4px 0' } }, x))) : null,
