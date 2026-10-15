@@ -167,6 +167,23 @@ export function reviewDrawer(trade, ctx) {
   });
 }
 
+// ---------------- Review queue ----------------
+// Trades that never got a grade: imported ones, or logged ones where the review was skipped.
+export const unreviewed = () => A.tradesIn().filter((t) => !t.setup_grade && !/Review: grades/.test(t.notes || ''));
+
+export function reviewQueue(ctx, limit = 5) {
+  const q = unreviewed();
+  if (!q.length) return null;
+  const rows = q.slice(0, limit);
+  return h('div', { class: 'card', style: { borderLeft: '2px solid var(--gold)' } },
+    h('div', { class: 'row between' }, h('h3', null, `${q.length} ${q.length === 1 ? 'trade' : 'trades'} waiting for review`), badge('2 min', 'gold')),
+    h('p', { class: 'mut', style: { margin: '8px 0 4px' } }, 'Six taps each. This is how the Lab learns which setups actually pay you.'),
+    rows.map((t) => h('div', { class: 'row between', style: { padding: '8px 0', borderTop: '1px solid var(--line)' } },
+      h('span', null, `${t.date}  ${t.direction} ${t.contracts} ${t.instrument}  `, h('span', { class: t.pnl > 0 ? 'green' : t.pnl < 0 ? 'red' : '' }, money(t.pnl))),
+      btn('Why did you take it?', () => reviewDrawer(t, ctx), 'ghost sm'))),
+    q.length > limit ? h('p', { class: 'mut', style: { margin: '8px 0 0', fontSize: '12px' } }, `${q.length - limit} more in the Journal.`) : null);
+}
+
 export default [
   { slug: 'pre-trade', title: 'Pre-Trade Check', desc: 'Size the trade, check your room and your tilt before you click. Answers "how many contracts?" in one go.', render: preTrade },
 ];
