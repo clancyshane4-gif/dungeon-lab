@@ -5,6 +5,7 @@ import { h, btn, card, form, money, num, stat, badge, guard, toast, drawer } fro
 import * as db from '../db.js';
 import * as T from '../lib/trading.js';
 import * as A from '../actions.js';
+import tools from './tools.js';
 
 const { S } = db;
 const MICRO = { NQ: 'MNQ', ES: 'MES' };
@@ -118,9 +119,13 @@ function preTrade(el, ctx) {
       flags.length ? h('div', { class: 'card danger' }, flags.map((x) => h('p', { class: 'red', style: { margin: '4px 0' } }, x))) : null,
       cons ? h('div', { class: 'card' + (cons.over ? ' danger' : '') }, h('h3', null, 'Consistency rule'), h('p', { class: cons.over ? 'red' : 'mut', style: { margin: '8px 0 0' } }, cons.text)) : null);
   }
+  // The full setup grader, folded away. Most days the three checks are enough; this is for when you want the grade.
+  const graderBody = h('div', { style: { marginTop: '14px' } });
+  const grader = h('details', { class: 'card', ontoggle: (e) => { if (e.target.open && !graderBody.childElementCount) tools.find((p) => p.slug === 'validator').render(graderBody, ctx); } },
+    h('summary', { style: { cursor: 'pointer' } }, h('h3', { style: { display: 'inline' } }, 'Grade this setup'), h('span', { class: 'mut' }, '  Optional. Tick the checklist and get a grade against the framework.')), graderBody);
   el.append(card(null, f.el), out,
     card('Before you click', checks.map((c, i) => h('label', { class: 'check' }, h('input', { type: 'checkbox', onchange: (e) => { ticked[i] = e.target.checked; drawReady(); } }), h('span', null, c)))),
-    ready, h('p', { class: 'ital' }, 'This checks size and room. It does not tell you to take the trade.'));
+    ready, grader, h('p', { class: 'ital' }, 'This checks size and room. It does not tell you to take the trade.'));
   calc(); drawReady();
 }
 
