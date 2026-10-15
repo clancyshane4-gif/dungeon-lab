@@ -52,7 +52,7 @@ export function setupCard(ctx) {
       const map = r ? { profit_target: r.profit_target, max_drawdown: r.max_drawdown, drawdown_type: r.drawdown_type, daily_loss_limit: r.daily_loss_limit, consistency_rule_pct: r.consistency } : {};
       for (const key of ['profit_target', 'max_drawdown', 'daily_loss_limit', 'consistency_rule_pct']) api.set(key, map[key] ?? null);
       if (map.drawdown_type) api.set('drawdown_type', map.drawdown_type);
-      note.textContent = r && r.max_drawdown ? `Pre-filled from the ${v.firm} ${sizeLabel(+v.account_size)} rules in the Lab. Confirm them on the firm's site.` : "No saved rules for this one yet. Type the numbers from the firm's site; you can change them any time in Settings.";
+      note.textContent = r && r.max_drawdown ? `Pre-filled from the ${v.firm} ${sizeLabel(+v.account_size)} rules in the Lab. Confirm them on the firm's site.` : "No saved rules for this one yet. Type the numbers from the firm's site; you can change them any time in Accounts & rules.";
     });
     const note = h('p', { class: 'ital', style: { margin: '10px 0 0' } }, "Pre-filled from the Lucid Trading $50K rules in the Lab. Confirm them on the firm's site.");
     f.inputs.firm.input.dispatchEvent(new Event('change'));
@@ -76,7 +76,7 @@ export function setupCard(ctx) {
       { key: 'max_risk_per_trade', label: 'Max risk per trade ($)', type: 'number' },
       { key: 'daily_max_loss', label: 'Your own daily max loss ($)', type: 'number' },
     ], { max_trades_per_day: 3, stop_after_win: true, max_losses_in_row: 2, ...cur });
-    wrap.append(f.el, h('p', { class: 'ital', style: { margin: '10px 0 0' } }, 'The tilt guard, the Pre-Trade Check and Timmy all use these. Change them in Settings any time.'),
+    wrap.append(f.el, h('p', { class: 'ital', style: { margin: '10px 0 0' } }, 'The tilt guard, the Pre-Trade Check and Timmy all use these. Change them in Accounts & rules any time.'),
       h('div', { style: { marginTop: '14px' } }, btn('Save rules', guard(async () => {
         const v = f.get();
         if (!v.max_trades_per_day) throw new Error('Set a max number of trades per day.');
