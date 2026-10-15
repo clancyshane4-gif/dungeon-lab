@@ -110,8 +110,8 @@ function codeScreen() {
   const f = form([{ key: 'code', label: 'Access code', span: 3 }]);
   app.replaceChildren(h('div', { class: 'auth' },
     h('div', { class: 'brand mb' }, h('img', { src: '/brand-logo.png', alt: '' }), h('div', null, h('b', null, "Timmy's ", h('em', null, 'Dungeon')), h('span', { class: 'label' }, 'Dungeon Lab'))),
-    h('div', { class: 'card' }, h('h2', null, 'Unlock your Lab'),
-      h('p', { class: 'mut' }, 'Enter the access code your coach gave you on the call. You only do this once.'), f.el,
+    h('div', { class: 'card' }, h('h2', null, 'Your membership is not active'),
+      h('p', { class: 'mut' }, 'Access comes with an active Timmy\'s Dungeon membership on Whop. If you just renewed, give it a minute and sign in again. If you were given an access code instead, enter it here.'), f.el,
       h('div', { class: 'row between', style: { marginTop: '18px' } },
         btn('Unlock', guard(async () => {
           const { code } = f.get();
